@@ -16,7 +16,8 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.k8bus.UnnamedDungeons"
+			"com.k8bus.UnnamedDungeons",
+			"com.k8bus.visual_engine.VisualInitializer"
 		],
 		"client": [
 			"com.k8bus.client.UnnamedDungeonsClient"
