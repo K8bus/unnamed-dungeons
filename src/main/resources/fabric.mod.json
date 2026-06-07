@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "unnamed-dungeons",
+	"version": "${version}",
+	"name": "Unnamed Dungeons",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/unnamed-dungeons/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.k8bus.UnnamedDungeons"
+		],
+		"client": [
+			"com.k8bus.client.UnnamedDungeonsClient"
+		],
+		"fabric-datagen": [
+			"com.k8bus.client.UnnamedDungeonsDataGenerator"
+		]
+	},
+	"mixins": [
+		"unnamed-dungeons.mixins.json",
+		{
+			"config": "unnamed-dungeons.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

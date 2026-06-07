@@ -1,0 +1,20 @@
+{
+  "description": {
+    "translate": "enchantment.unnamed-dungeons.poison"
+  },
+  "supported_items": "#minecraft:enchantable/weapon",
+  "primary_items": "#minecraft:enchantable/weapon",
+  "slots": ["mainhand"],
+  "weight": 3,
+  "max_level": 3,
+  "min_cost": {
+    "base": 10,
+    "per_level_above_first": 8
+  },
+  "max_cost": {
+    "base": 25,
+    "per_level_above_first": 10
+  },
+  "anvil_cost": 2,
+  "effects": {}
+}

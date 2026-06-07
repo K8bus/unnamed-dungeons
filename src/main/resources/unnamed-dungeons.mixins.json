@@ -1,0 +1,19 @@
+{
+	"required": true,
+	"package": "com.k8bus.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"ProjectileEntityMixin",
+		"AntiVenomMixin",
+		"PoisonMeleeMixin",
+		"PoisonArrowMixin",
+		"NeurotoxicityMixin",
+		"BlockMiningMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

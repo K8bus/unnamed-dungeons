@@ -1,0 +1,20 @@
+{
+  "description": {
+    "translate": "enchantment.unnamed-dungeons.anti_venom"
+  },
+  "supported_items": "#minecraft:enchantable/armor",
+  "primary_items": "#minecraft:enchantable/armor",
+  "slots": ["armor", "head", "chest", "legs", "feet"],
+  "weight": 3,
+  "max_level": 3,
+  "min_cost": {
+    "base": 10,
+    "per_level_above_first": 8
+  },
+  "max_cost": {
+    "base": 25,
+    "per_level_above_first": 10
+  },
+  "anvil_cost": 2,
+  "effects": {}
+}
