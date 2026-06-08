@@ -8,8 +8,7 @@
 		"PoisonMeleeMixin",
 		"PoisonArrowMixin",
 		"NeurotoxicityMixin",
-		"BlockMiningMixin",
-		"ArrowTrailMixin"
+		"BlockMiningMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

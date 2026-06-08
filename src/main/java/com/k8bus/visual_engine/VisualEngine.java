@@ -1,160 +1,185 @@
 package com.k8bus.visual_engine;
 
-import com.k8bus.mixin.DisplayAccessor;
+import com.mojang.math.Transformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import com.mojang.math.Transformation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class VisualEngine {
+public final class VisualEngine {
+
     private static final VisualEngine INSTANCE = new VisualEngine();
-    private final Map<String, AnimationSequence> registry = new HashMap<>();
-    private final List<ActiveAnimation> activeAnimations = new ArrayList<>();
+    public static VisualEngine get() { return INSTANCE; }
+
+    private final Map<String, VfxSequence> registry = new HashMap<>();
+    private final List<VfxInstance>        active   = new ArrayList<>();
 
     private VisualEngine() {}
 
-    public static VisualEngine getInstance() {
-        return INSTANCE;
-    }
+    // -------------------------------------------------------------------------
 
-    public void registerPattern(AnimationSequence sequence) {
+    public void register(VfxSequence sequence) {
         registry.put(sequence.id(), sequence);
     }
 
     public void tick() {
-        // Bezpieczne i wydajne czyszczenie bez alokacji nowych list w każdym ticku
-        for (int i = activeAnimations.size() - 1; i >= 0; i--) {
-            ActiveAnimation anim = activeAnimations.get(i);
-            anim.tick();
-            if (anim.isFinished()) {
-                activeAnimations.remove(i);
-            }
+        for (int i = active.size() - 1; i >= 0; i--) {
+            VfxInstance inst = active.get(i);
+            inst.tick();
+            if (inst.isFinished()) active.remove(i);
         }
     }
 
-    // TYP 1: Efekt obszarowy na ziemi
-    public void spawnEffect(String sequenceId, ServerLevel world, Vec3 pos, Vector3f startScale, Vector3f targetScale, int interpolationTicks) {
-        AnimationSequence seq = registry.get(sequenceId);
-        if (seq == null) return;
+    // -------------------------------------------------------------------------
+    // Spawn 1: Burst na pozycji
 
-        Display.ItemDisplay display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, world);
-        display.setPos(pos.x, pos.y, pos.z);
-        display.setItemTransform(ItemDisplayContext.FIXED);
+    public VfxInstance play(String id, ServerLevel level, Vec3 pos) {
+        VfxSequence seq = require(id);
+        if (seq == null) return null;
 
-        // Ustawiamy skalę początkową
-        display.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), startScale, new Quaternionf()));
-        world.addFreshEntity(display);
+        Display display = buildDisplay(seq, level, pos);
+        VfxInstance inst = new VfxInstance(display, seq);
 
-        // Wstrzyknięcie interpolacji przez system EntityData za pomocą Mixinu
-        if (interpolationTicks > 0) {
-            display.getEntityData().set(DisplayAccessor.getInterpolationStartDelta(), 0);
-            display.getEntityData().set(DisplayAccessor.getInterpolationDuration(), interpolationTicks);
-
-            // Klient płynnie zinterpoluje transformację do skali docelowej
-            display.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), targetScale, new Quaternionf()));
-        }
-
-        activeAnimations.add(new ActiveAnimation(display, seq));
+        level.addFreshEntity(display);
+        active.add(inst);
+        return inst;
     }
 
-    // TYP 2: Ikony/Dymki nad głową
-    public void spawnAttachedEffect(String sequenceId, Entity anchor, Vector3f scale) {
-        AnimationSequence seq = registry.get(sequenceId);
-        if (seq == null || !anchor.isAlive()) return;
+    // -------------------------------------------------------------------------
+    // Spawn 2: Ring N równomiernie rozmieszczonych efektów wokół punktu
+    //
+    // Użycie: playCircle("poison_rise", level, pos, 8, 0.6f)
+    //         → 8 pionowych smug w okręgu o promieniu 0.6
 
-        ServerLevel world = (ServerLevel) anchor.level();
-        Display.ItemDisplay display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, world);
-        display.setPos(anchor.getX(), anchor.getY(), anchor.getZ());
-        display.setItemTransform(ItemDisplayContext.FIXED);
-        display.setBillboardConstraints(Display.BillboardConstraints.CENTER);
+    public List<VfxInstance> playCircle(String id, ServerLevel level, Vec3 center,
+                                        int count, float radius) {
+        List<VfxInstance> result = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            double angle = (2 * Math.PI * i) / count;
+            Vec3 pos = center.add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+            VfxInstance inst = play(id, level, pos);
+            if (inst != null) result.add(inst);
+        }
+        return result;
+    }
 
-        float floatHeight = anchor.getBbHeight() + 0.4f;
+    // -------------------------------------------------------------------------
+    // Spawn 3: Attached do encji
 
-        // Start od skali 0 (niewidoczny)
-        display.setTransformation(new Transformation(new Vector3f(0f, floatHeight, 0f), new Quaternionf(), new Vector3f(0f, 0f, 0f), new Quaternionf()));
-        world.addFreshEntity(display);
+    public VfxInstance playAttached(String id, Entity anchor) {
+        return playAttached(id, anchor, anchor.getBbHeight() + 0.3f);
+    }
+
+    public VfxInstance playAttached(String id, Entity anchor, float yOffset) {
+        if (!anchor.isAlive()) return null;
+
+        VfxSequence seq = require(id);
+        if (seq == null) return null;
+
+        ServerLevel level = (ServerLevel) anchor.level();
+
+        Display display = buildDisplay(seq, level, anchor.position());
+        display.setTransformation(new Transformation(
+                new Vector3f(0f, yOffset, 0f), new Quaternionf(),
+                new Vector3f(0f), new Quaternionf()
+        ));
+
+        VfxInstance inst = new VfxInstance(display, seq);
+        level.addFreshEntity(display);
+
+        // startRiding(anchor) — poprawna sygnatura w Twojej wersji
         display.startRiding(anchor);
 
-        // Odpalenie animacji wyskakiwania przez 3 ticki
-        display.getEntityData().set(DisplayAccessor.getInterpolationStartDelta(), 0);
-        display.getEntityData().set(DisplayAccessor.getInterpolationDuration(), 3);
-
-        display.setTransformation(new Transformation(new Vector3f(0f, floatHeight, 0f), new Quaternionf(), scale, new Quaternionf()));
-
-        activeAnimations.add(new ActiveAnimation(display, seq));
+        active.add(inst);
+        return inst;
     }
 
-    // Zachowany oryginalny kod dla kompatybilności wstecznej
-    public void spawnEffect(String sequenceId, ServerLevel world, Vec3 pos, Vector3f scale) {
-        spawnEffect(sequenceId, world, pos, scale, scale, 0);
-    }
+    // -------------------------------------------------------------------------
+    // Spawn 4: Kierunkowy
 
-    public void spawnDirectionalEffect(String sequenceId, ServerLevel world, Vec3 pos, Vec3 direction, Vector3f scale) {
-        AnimationSequence seq = registry.get(sequenceId);
-        if (seq == null) return;
+    public VfxInstance playDirectional(String id, ServerLevel level, Vec3 pos, Vec3 direction) {
+        VfxSequence seq = require(id);
+        if (seq == null) return null;
 
-        Display.ItemDisplay display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, world);
-        display.setPos(pos.x + (direction.x * 0.5), pos.y + (direction.y * 0.5), pos.z + (direction.z * 0.5));
-        display.setItemTransform(ItemDisplayContext.FIXED);
+        Display display = buildDisplay(seq, level, pos);
 
-        // Wyliczamy kąty yaw i pitch na podstawie wektora kierunku
         float yaw = (float) Math.atan2(direction.x, direction.z);
+        double hd = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+        float pitch = (float) Math.atan2(-direction.y, hd);
 
-        double horizontalDistance = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
-        float pitch = (float) Math.atan2(-direction.y, horizontalDistance);
+        Quaternionf rot = new Quaternionf().rotationYXZ(yaw, pitch, (float) (Math.PI / 2));
+        display.setTransformation(new Transformation(new Vector3f(), rot, new Vector3f(0f), new Quaternionf()));
 
-        // Składamy kwaternion w kolejności YXZ (Yaw, Pitch, Roll)
-        // Dodajemy Math.PI / 2 (90 stopni) do Roll (Z) lub Pitch (X), żeby postawić model prostopadle
-        Quaternionf rotation = new Quaternionf()
-                .rotationYXZ(yaw, pitch, (float) (Math.PI / 2)); // Obrót wokół osi Z (Roll) stawia płaski model do pionu
+        VfxInstance inst = new VfxInstance(display, seq);
+        level.addFreshEntity(display);
 
-        display.setTransformation(new Transformation(new Vector3f(), rotation, scale, new Quaternionf()));
-
-        world.addFreshEntity(display);
-        activeAnimations.add(new ActiveAnimation(display, seq));
+        active.add(inst);
+        return inst;
     }
 
-    public void spawnTrailSegment(String sequenceId, ServerLevel world, Vec3 startPos, Vec3 endPos, Vector3f scale) {
-        AnimationSequence seq = registry.get(sequenceId);
-        if (seq == null) return;
+    // -------------------------------------------------------------------------
+    // Spawn 5: Segment smugi między dwoma punktami
 
-        // Obliczamy środek odcinka, żeby tam postawić ItemDisplay
-        Vec3 midPos = startPos.add(endPos).scale(0.5);
+    public VfxInstance playTrail(String id, ServerLevel level, Vec3 from, Vec3 to) {
+        VfxSequence seq = require(id);
+        if (seq == null) return null;
 
-        Display.ItemDisplay display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, world);
-        display.setPos(midPos.x, midPos.y, midPos.z);
-        display.setItemTransform(ItemDisplayContext.FIXED);
-        display.setItemStack(new ItemStack(Items.PINK_STAINED_GLASS));
+        Vec3 dir = to.subtract(from);
+        double len = dir.length();
+        if (len < 0.01) return null;
 
-        // Wektor kierunku smugi
-        Vec3 direction = endPos.subtract(startPos);
-        double length = direction.length();
+        Vec3 mid = from.add(to).scale(0.5);
 
-        // Jeśli smuga jest zbyt krótka, nie spawnuje się
-        if (length < 0.01) return;
+        Display display = buildDisplay(seq, level, mid);
 
-        // Kwaternion patrzący wzdłuż smugi
-        Vector3f dir = new Vector3f((float)direction.x, (float)direction.y, (float)direction.z).normalize();
-        Quaternionf rotation = new Quaternionf().lookAlong(dir, new Vector3f(0, 1, 0));
+        Vector3f dirF = new Vector3f((float) dir.x, (float) dir.y, (float) dir.z).normalize();
+        Quaternionf rot = new Quaternionf().lookAlong(dirF, new Vector3f(0, 1, 0));
 
-        // Skalowanie: X i Y to grubość, Z to długość smugi
-        Vector3f finalScale = new Vector3f(scale.x, scale.y, (float)length);
+        Vector3f scale = new Vector3f(seq.peakScale().x, seq.peakScale().y, (float) len);
+        display.setTransformation(new Transformation(new Vector3f(), rot, scale, new Quaternionf()));
 
-        display.setTransformation(new Transformation(new Vector3f(), rotation, finalScale, new Quaternionf()));
+        VfxInstance inst = new VfxInstance(display, seq);
+        level.addFreshEntity(display);
 
-        world.addFreshEntity(display);
-        activeAnimations.add(new ActiveAnimation(display, seq));
+        active.add(inst);
+        return inst;
+    }
+
+    // -------------------------------------------------------------------------
+
+    public void stop(VfxInstance instance) {
+        if (instance != null) instance.stop();
+    }
+
+    // -------------------------------------------------------------------------
+
+    private Display buildDisplay(VfxSequence seq, ServerLevel level, Vec3 pos) {
+        return switch (seq.type()) {
+            case ITEM -> {
+                var d = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
+                d.setPos(pos.x, pos.y, pos.z);
+                d.setItemTransform(ItemDisplayContext.FIXED);
+                yield d;
+            }
+            case BLOCK -> {
+                var d = new Display.BlockDisplay(EntityType.BLOCK_DISPLAY, level);
+                d.setPos(pos.x, pos.y, pos.z);
+                d.setBlockState(Blocks.AIR.defaultBlockState());
+                yield d;
+            }
+        };
+    }
+
+    private VfxSequence require(String id) {
+        VfxSequence seq = registry.get(id);
+        if (seq == null) System.err.println("[VisualEngine] Niezarejestrowany efekt: '" + id + "'");
+        return seq;
     }
 }

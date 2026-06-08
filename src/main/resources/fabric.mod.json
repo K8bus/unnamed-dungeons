@@ -26,12 +26,14 @@
 			"com.k8bus.client.UnnamedDungeonsDataGenerator"
 		]
 	},
+	"accessWidener": "visual_engine.accesswidener",
 	"mixins": [
 		"unnamed-dungeons.mixins.json",
 		{
 			"config": "unnamed-dungeons.client.mixins.json",
 			"environment": "client"
-		}
+		},
+		"visual-engine.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
