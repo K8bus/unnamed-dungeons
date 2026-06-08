@@ -375,9 +375,23 @@ public class DungeonCommand {
         try {
             ServerLevel level = ctx.getSource().getLevel();
             DungeonState state = DungeonState.get(level);
+
+            // Fizycznie usuwamy bariery ze świata dla KAŻDEGO dungeona
+            for (ActiveDungeon dungeon : state.getActiveDungeons()) {
+                // Czyścimy główny obszar dungeonu
+                DungeonBarrierHelper.removeBarriers(level, dungeon.getBoundingBox());
+
+                // Czyścimy bariery z każdego pojedynczego pokoju (roomu), jeśli tam były generowane
+                for (RoomEncounter room : dungeon.getRooms()) {
+                    DungeonBarrierHelper.removeBarriers(level, room.getRoomBox());
+                }
+            }
+
+            // świat jest czysty, możemy bezpiecznie usunąć dungeony z pamięci
             state.getActiveDungeons().clear();
             state.setDirty();
-            ctx.getSource().sendSuccess(() -> Component.literal("Wyczyszczono wszystkie dungeony."), false);
+
+            ctx.getSource().sendSuccess(() -> Component.literal("Wyczyszczono wszystkie dungeony i usunięto bariery ochronne."), false);
             return 1;
         } catch (Exception e) {
             ctx.getSource().sendFailure(Component.literal("Błąd: " + e.getMessage()));
