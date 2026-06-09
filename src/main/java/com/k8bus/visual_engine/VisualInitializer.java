@@ -10,8 +10,11 @@ public class VisualInitializer implements ModInitializer {
     @Override
     public void onInitialize() {
         // Podpięcie tick loop silnika
-        ServerTickEvents.END_SERVER_TICK.register(server -> VisualEngine.get().tick());
-
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            VisualEngine.get().tick();
+            WebRemovalTask.tick();  // ← to musi być
+        });
+        VfxItems.register();
         registerEffects();
     }
 
@@ -232,3 +235,4 @@ public class VisualInitializer implements ModInitializer {
             .scale(0.3f, 0.3f, 1.0f).fadeIn(1).fadeOut(5).fixed()
             .build("deflect_trail"));
 */
+

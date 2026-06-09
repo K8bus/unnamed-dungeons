@@ -1,6 +1,7 @@
 package com.k8bus.mixin;
 
 import com.k8bus.enchantment.ModEnchantments;
+import com.k8bus.visual_engine.PyramidEnsnareEffect;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
@@ -53,5 +54,10 @@ public abstract class PoisonArrowMixin {
         cloud.addEffect(new MobEffectInstance(MobEffects.POISON, 60 + level * 20, amplifier));
 
         serverLevel.addFreshEntity(cloud);
+
+        // Pnącza — ostrosłup zaciska się na trafionym
+        if (hitResult.getEntity() instanceof LivingEntity target) {
+            PyramidEnsnareEffect.apply(target, 40 + level * 10);
+        }
     }
 }

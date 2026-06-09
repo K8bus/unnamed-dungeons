@@ -10,7 +10,6 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
@@ -73,7 +72,7 @@ public final class PyramidEnsnareEffect {
     }
 
     private static void setModel(Display.ItemDisplay display, int cmd) {
-        ItemStack stack = new ItemStack(Items.PAPER);
+        ItemStack stack = new ItemStack(VfxItems.VFX_MARKER);
         stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
                 List.of((float) cmd), List.of(), List.of(), List.of()
         ));

@@ -153,7 +153,7 @@ public class VfxInstance {
             case ITEM -> {
                 if (seq.itemCMDs() == null || seq.itemCMDs().length == 0) return;
                 int cmd = seq.itemCMDs()[Math.min(frameIndex, seq.itemCMDs().length - 1)];
-                ItemStack stack = new ItemStack(Items.PAPER);
+                ItemStack stack = new ItemStack(VfxItems.VFX_MARKER);
                 stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
                         List.of((float) cmd), List.of(), List.of(), List.of()
                 ));

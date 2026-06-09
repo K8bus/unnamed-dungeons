@@ -1,0 +1,33 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      { "when": "8001", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/fire_burst" } },
+      { "when": "8002", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/fire_burst" } },
+      { "when": "8003", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/fire_burst" } },
+      { "when": "8010", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/frost_burst" } },
+      { "when": "8020", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/lightning_bolt" } },
+      { "when": "8021", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/trail_segment" } },
+      { "when": "8030", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/poison_cloud" } },
+      { "when": "8031", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/poison_cloud" } },
+      { "when": "8032", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/poison_cloud" } },
+      { "when": "8040", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/soul_burst" } },
+      { "when": "8041", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/soul_burst" } },
+      { "when": "8042", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/trail_segment" } },
+      { "when": "8050", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/void_burst" } },
+      { "when": "8060", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/radiance_burst" } },
+      { "when": "8070", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/shockwave_ring" } },
+      { "when": "8071", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/crit_burst" } },
+      { "when": "8100", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/trail_segment" } },
+      { "when": "8101", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/trail_segment" } },
+      { "when": "8103", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/trail_segment" } },
+      { "when": "8210", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/poison_rise" } },
+      { "when": "8211", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/poison_rise" } },
+      { "when": "8220", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/trail_segment" } },
+      { "when": "8230", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/pyramid_face" } }
+    ],
+    "fallback": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/invisible" }
+  }
+}

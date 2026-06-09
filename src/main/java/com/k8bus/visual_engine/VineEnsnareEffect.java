@@ -38,6 +38,7 @@ public final class VineEnsnareEffect {
                 8       // fadeOutTicks
         );
 
+
         // Mechaniczny root — identyczny co web
         target.addEffect(new MobEffectInstance(
                 MobEffects.SLOWNESS,
