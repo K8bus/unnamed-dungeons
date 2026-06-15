@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 public class ModBlockEntities {
 
     public static BlockEntityType<DungeonGateBlockEntity> DUNGEON_GATE;
+    public static BlockEntityType<WalletDepositBlockEntity> WALLET_DEPOSIT;
 
     public static void initialize() {
         DUNGEON_GATE = FabricBlockEntityTypeBuilder
@@ -21,6 +22,16 @@ public class ModBlockEntities {
                 BuiltInRegistries.BLOCK_ENTITY_TYPE,
                 Identifier.fromNamespaceAndPath(UnnamedDungeons.MOD_ID, "dungeon_gate"),
                 DUNGEON_GATE
+        );
+
+        WALLET_DEPOSIT = FabricBlockEntityTypeBuilder
+                .create(WalletDepositBlockEntity::new, ModBlocks.WALLET_DEPOSIT)
+                .build();
+
+        Registry.register(
+                BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                Identifier.fromNamespaceAndPath(UnnamedDungeons.MOD_ID, "wallet_deposit"),
+                WALLET_DEPOSIT
         );
     }
 }

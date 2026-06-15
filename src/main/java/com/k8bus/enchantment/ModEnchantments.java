@@ -32,5 +32,40 @@ public class ModEnchantments {
             Identifier.fromNamespaceAndPath("unnamed-dungeons", "neurotoxicity")
     );
 
+    public static final ResourceKey<Enchantment> VINES = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath("unnamed-dungeons", "vines")
+    );
+
+    public static final ResourceKey<Enchantment> WEBBING = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath("unnamed-dungeons", "webbing")
+    );
+
+    public static final ResourceKey<Enchantment> JUNGLES_WRATH = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath("unnamed-dungeons", "jungles_wrath")
+    );
+
+    public static final ResourceKey<Enchantment> LIFE_LEECH = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath("unnamed-dungeons", "life_leech")
+    );
+
+    public static final ResourceKey<Enchantment> RICOCHET = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath("unnamed-dungeons", "ricochet")
+    );
+
+    public static final ResourceKey<Enchantment> THUNDERING = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath("unnamed-dungeons", "thundering")
+    );
+
+    public static final ResourceKey<Enchantment> VOID_STRIKE = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath("unnamed-dungeons", "void_strike")
+    );
+
     public static void initialize() {}
 }

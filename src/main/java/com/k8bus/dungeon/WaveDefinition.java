@@ -7,24 +7,29 @@ public class WaveDefinition {
 
     public static final Codec<WaveDefinition> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                    Codec.INT.fieldOf("mob_count").forGetter(WaveDefinition::getMobCount)
+                    Codec.INT.fieldOf("base_count").forGetter(WaveDefinition::getBaseCount),
+                    Codec.INT.fieldOf("extra_per_player").forGetter(WaveDefinition::getExtraPerPlayer)
             ).apply(instance, WaveDefinition::new)
     );
 
-    private final int mobCount;
+    private final int baseCount;
+    private final int extraPerPlayer;
 
-    public WaveDefinition(int mobCount) {
-        this.mobCount = mobCount;
+    public WaveDefinition(int baseCount, int extraPerPlayer) {
+        this.baseCount = baseCount;
+        this.extraPerPlayer = extraPerPlayer;
     }
 
-    public int getMobCount() {
-        return mobCount;
+    public int getBaseCount() {
+        return baseCount;
+    }
+
+    public int getExtraPerPlayer() {
+        return extraPerPlayer;
     }
 
     public int getScaledMobCount(int playerCount) {
         int safePlayerCount = Math.max(1, playerCount);
-        int extraPerPlayer = Math.max(1, mobCount / 2);
-
-        return mobCount + ((safePlayerCount - 1) * extraPerPlayer);
+        return baseCount + ((safePlayerCount - 1) * extraPerPlayer);
     }
 }

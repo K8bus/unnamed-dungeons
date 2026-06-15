@@ -47,6 +47,10 @@ public class DungeonTickHandler {
                     } else if (!inBox && dungeon.hasPlayer(player.getUUID())) {
                         onPlayerExit(player, dungeon, state);
                     }
+                    
+                    if (dungeon.hasPlayer(player.getUUID())) {
+                        syncHud(player, dungeon);
+                    }
                 }
             }
         }
@@ -136,7 +140,7 @@ public class DungeonTickHandler {
                 room.tickBetweenWavesTimer();
 
                 if (room.isBetweenWavesTimerFinished()) {
-                    room.startCurrentWave(dungeon.getPlayerSnapshotCount());
+                    room.startCurrentWave(dungeon.getPlayerSnapshotCount(), level);
                 }
 
                 stateDirty = true;
@@ -145,6 +149,15 @@ public class DungeonTickHandler {
 
             // WAVE_ACTIVE: 4.3 — domknij falę po UUID (activeMobIds puste)
             if (room.getPhase() == RoomEncounter.RoomPhase.WAVE_ACTIVE) {
+                boolean removedAny = room.getActiveMobIds().removeIf(uuid -> {
+                    net.minecraft.world.entity.Entity entity = level.getEntity(uuid);
+                    return entity == null || !entity.isAlive();
+                });
+                
+                if (removedAny) {
+                    stateDirty = true;
+                }
+
                 boolean progressed = room.tryCompleteWaveAfterAllMobsGone();
                 if (progressed) {
                     stateDirty = true;
@@ -154,6 +167,11 @@ public class DungeonTickHandler {
             // REWARD: zawsze po ostatniej fali (albo gdy currentWaveIndex się skończy)
             if (room.getPhase() == RoomEncounter.RoomPhase.REWARD) {
                 DungeonGateHelper.unlockGate(level, room.getRewardGatePos());
+                
+                if (!room.getHeroChestPos().equals(net.minecraft.core.BlockPos.ZERO)) {
+                    level.setBlock(room.getHeroChestPos(), com.k8bus.block.ModBlocks.HERO_CHEST.defaultBlockState(), 3);
+                }
+
                 room.completeRoom();
                 stateDirty = true;
                 continue;
@@ -174,7 +192,7 @@ public class DungeonTickHandler {
                 }
 
                 if (anyPlayerInsideRoom) {
-                    room.startCurrentWave(dungeon.getPlayerSnapshotCount());
+                    room.startCurrentWave(dungeon.getPlayerSnapshotCount(), level);
                     stateDirty = true;
                 }
             }
@@ -190,20 +208,32 @@ public class DungeonTickHandler {
     }
 
     private static void onPlayerEnter(ServerPlayer player, ActiveDungeon dungeon, DungeonState state) {
+        // Check if the player enters any room and start a wave if necessary
+        for (RoomEncounter room : dungeon.getRooms()) {
+            if (room.getPhase() == RoomEncounter.RoomPhase.IDLE && room.getRoomBox().isInside(player.blockPosition())) {
+                room.setPhase(RoomEncounter.RoomPhase.WAVE_ACTIVE);
+                room.onWaveStartClearsActiveMobs();
+                room.startCurrentWave(dungeon.getPlayerSnapshotCount(), (ServerLevel) player.level());
+                state.setDirty();
+                break;
+            }
+        }
+
+        // Add player to the dungeon
         dungeon.addPlayer(player.getUUID());
 
         if (dungeon.getPhase() == ActiveDungeon.DungeonPhase.IDLE) {
             dungeon.setPhaseWithTimer(ActiveDungeon.DungeonPhase.WAITING, WAITING_SECONDS);
             UnnamedDungeons.LOGGER.info("Dungeon przechodzi do fazy WAITING");
 
-            // Postaw bariery na granicy bounding boxa
+            // Place barriers on the boundary of the bounding box
             DungeonBarrierHelper.placeBarriers(player.level(), dungeon.getBoundingBox());
         }
 
-        // Zapisz oryginalny spawnpoint i ustaw tymczasowy
+        // Save original spawnpoint and set temporary spawnpoint
         DungeonSpawnpointHelper.saveAndSetSpawnpoint(player, dungeon.getBoundingBox());
 
-        // Zapisz oryginalny tryb gry i ustaw Adventure mode
+        // Save original game mode and set Adventure mode
         dungeon.saveOriginalGameMode(player.getUUID(), player.gameMode.getGameModeForPlayer());
         player.setGameMode(net.minecraft.world.level.GameType.ADVENTURE);
 
@@ -226,8 +256,35 @@ public class DungeonTickHandler {
         player.setGameMode(dungeon.getOriginalGameMode(player.getUUID()));
         dungeon.clearOriginalGameMode(player.getUUID());
 
+        // Wyczyść HUD klienta
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new com.k8bus.network.DungeonHudPayload(0, 0));
+
         state.setDirty();
         UnnamedDungeons.LOGGER.info("{} wyszedł z dungeonu", player.getName().getString());
+    }
+
+    private static void syncHud(ServerPlayer player, ActiveDungeon dungeon) {
+        int wave = 0;
+        int mobs = 0;
+
+        if (dungeon.getPhase() == ActiveDungeon.DungeonPhase.ACTIVE) {
+            for (RoomEncounter room : dungeon.getRooms()) {
+                if (room.getRoomBox().isInside(player.blockPosition())) {
+                    if (room.getPhase() == RoomEncounter.RoomPhase.WAVE_ACTIVE || room.getPhase() == RoomEncounter.RoomPhase.BETWEEN_WAVES) {
+                        wave = room.getCurrentWaveNumber();
+                        mobs = room.getActiveMobIdsCount();
+                    }
+                    break;
+                }
+            }
+        }
+
+        int phaseTimer = 0;
+        if (dungeon.getPhase() == ActiveDungeon.DungeonPhase.WAITING) {
+            phaseTimer = dungeon.getPhaseTimer();
+        }
+
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new com.k8bus.network.DungeonHudPayload(wave, mobs, phaseTimer));
     }
 
     public static void resetDungeon(ServerLevel level, ActiveDungeon dungeon, DungeonState state) {
@@ -311,7 +368,7 @@ public class DungeonTickHandler {
         );
     }
 
-    private static void completeDungeon(ServerLevel level, ActiveDungeon dungeon, DungeonState state) {
+    public static void completeDungeon(ServerLevel level, ActiveDungeon dungeon, DungeonState state) {
         DungeonBarrierHelper.removeBarriers(level, dungeon.getBoundingBox());
 
         for (UUID playerId : dungeon.getPlayers()) {
@@ -336,40 +393,7 @@ public class DungeonTickHandler {
         );
     }
 
-    private static void handleRoomMobDeath(
-            ServerLevel level,
-            DungeonState state,
-            ActiveDungeon dungeon,
-            ServerPlayer player,
-            LivingEntity entity
-    ) {
-        RoomEncounter room = dungeon.getRoomAt(entity.blockPosition());
 
-        if (room == null) return;
-
-        if (room.getPhase() == RoomEncounter.RoomPhase.REWARD
-                || room.getPhase() == RoomEncounter.RoomPhase.COMPLETED) {
-            return;
-        }
-
-        if (room.getPhase() == RoomEncounter.RoomPhase.BETWEEN_WAVES) {
-            return;
-        }
-
-        // 4.1: start fali ma być po wejściu, a nie po death
-        if (room.getPhase() == RoomEncounter.RoomPhase.IDLE) {
-            return;
-        }
-
-        if (room.getPhase() != RoomEncounter.RoomPhase.WAVE_ACTIVE) {
-            return;
-        }
-
-        // 4.3: death event usuwa UUID (tick domyka falę po pustym secie)
-        room.onMobRemoved(entity.getUUID());
-
-        state.setDirty();
-    }
 
     private static void onEntityDeath(LivingEntity entity, net.minecraft.world.damagesource.DamageSource damageSource) {
         if (!(entity.level() instanceof ServerLevel level)) return;
@@ -383,7 +407,6 @@ public class DungeonTickHandler {
         if (!dungeon.hasPlayer(player.getUUID())) return;
 
         if (!dungeon.getRooms().isEmpty()) {
-            handleRoomMobDeath(level, state, dungeon, player, entity);
             return;
         }
 

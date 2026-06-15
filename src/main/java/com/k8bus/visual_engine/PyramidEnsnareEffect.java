@@ -24,7 +24,7 @@ public final class PyramidEnsnareEffect {
 
     private PyramidEnsnareEffect() {}
 
-    public static void apply(LivingEntity target, int holdTicks) {
+    public static void apply(LivingEntity target, int holdTicks, int cmd) {
         if (!(target.level() instanceof ServerLevel level)) return;
 
         float height     = target.getBbHeight() * 0.55f;
@@ -32,7 +32,7 @@ public final class PyramidEnsnareEffect {
         Vec3  feet       = target.position();
 
         for (int i = 0; i < 4; i++) {
-            spawnFace(level, feet, baseSpread, height, i * 90f, holdTicks);
+            spawnFace(level, feet, baseSpread, height, i * 90f, holdTicks, cmd);
         }
 
         target.addEffect(new MobEffectInstance(
@@ -42,7 +42,7 @@ public final class PyramidEnsnareEffect {
 
     private static void spawnFace(ServerLevel level, Vec3 feet,
                                   float baseSpread, float height,
-                                  float yawDeg, int holdTicks) {
+                                  float yawDeg, int holdTicks, int cmd) {
         var display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
         display.setPos(feet.x, feet.y, feet.z);
         display.setItemTransform(net.minecraft.world.item.ItemDisplayContext.FIXED);
@@ -51,16 +51,16 @@ public final class PyramidEnsnareEffect {
         display.setShadowRadius(0f);
         display.setBrightnessOverride(new Brightness(15, 15));
 
-        setModel(display, PYRAMID_CMD);
+        setModel(display, cmd);
 
         float rad = (float) Math.toRadians(yawDeg);
         Quaternionf rot = new Quaternionf().rotationY(rad);
         Vector3f offset = rot.transform(new Vector3f(0f, 0f, -baseSpread / 2f));
 
-        display.setTransformation(new Transformation(offset, rot, new Vector3f(0f), new Quaternionf()));
+        display.setTransformation(new Transformation(offset, rot, new Vector3f(0.01f), new Quaternionf()));
         level.addFreshEntity(display);
 
-        display.setTransformationInterpolationDelay(0);
+        display.setTransformationInterpolationDelay(1);
         display.setTransformationInterpolationDuration(7);
         display.setTransformation(new Transformation(
                 offset, rot,
@@ -80,6 +80,6 @@ public final class PyramidEnsnareEffect {
     }
 
     public static void apply(LivingEntity target) {
-        apply(target, DEFAULT_HOLD_TICKS);
+        apply(target, DEFAULT_HOLD_TICKS, PYRAMID_CMD);
     }
 }

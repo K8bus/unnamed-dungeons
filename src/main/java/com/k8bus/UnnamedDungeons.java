@@ -4,7 +4,9 @@ import com.k8bus.block.ModBlocks;
 import com.k8bus.block.entity.ModBlockEntities;
 import com.k8bus.command.DungeonCommand;
 import com.k8bus.dungeon.DungeonTickHandler;
+import com.k8bus.network.ServerNetworkHandler;
 import com.k8bus.effect.ModEffects;
+import com.k8bus.menu.ModMenuTypes;
 import com.k8bus.enchantment.ModEnchantments;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
@@ -20,6 +22,8 @@ public class UnnamedDungeons implements ModInitializer {
 		ModEffects.initialize();
 		ModBlocks.initialize();       // najpierw bloki
 		ModBlockEntities.initialize(); // potem block entities
+		ModMenuTypes.initialize();    // potem menu
+		ServerNetworkHandler.initialize();
 		DungeonCommand.register();
 		DungeonTickHandler.register();
 		LOGGER.info("Unnamed Dungeons initialized!");

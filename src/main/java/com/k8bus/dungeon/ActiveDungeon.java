@@ -14,22 +14,25 @@ import java.util.UUID;
 
 public class ActiveDungeon {
 
-    public static final Codec<ActiveDungeon> CODEC = RecordCodecBuilder.create(instance ->
-            instance.group(
-                    BoundingBox.CODEC.fieldOf("bounding_box").forGetter(ActiveDungeon::getBoundingBox),
-                    Codec.INT.fieldOf("kill_count").forGetter(ActiveDungeon::getKillCount),
-                    Codec.INT.fieldOf("kill_required").forGetter(ActiveDungeon::getKillRequired),
-                    Codec.STRING.fieldOf("phase").forGetter(d -> d.getPhase().name()),
-                    Codec.INT.fieldOf("phase_timer").forGetter(ActiveDungeon::getPhaseTimer),
-                    Codec.INT.optionalFieldOf("player_snapshot_count", 0).forGetter(ActiveDungeon::getPlayerSnapshotCount),
-                    BlockPos.CODEC.optionalFieldOf("waiting_gate_pos", BlockPos.ZERO).forGetter(ActiveDungeon::getWaitingGatePos),
-                    BlockPos.CODEC.optionalFieldOf("dungeon_gate_pos", BlockPos.ZERO).forGetter(ActiveDungeon::getDungeonGatePos),
-                    BlockPos.CODEC.optionalFieldOf("waiting_spawn_pos", BlockPos.ZERO).forGetter(ActiveDungeon::getWaitingSpawnPos),
-                    RoomEncounter.CODEC.listOf().optionalFieldOf("rooms", List.of()).forGetter(ActiveDungeon::getRooms),
-                    Codec.unboundedMap(Codec.STRING, Codec.STRING)
-                            .optionalFieldOf("original_game_modes", Map.of())
-                            .forGetter(ActiveDungeon::getOriginalGameModesForCodec)
-            ).apply(instance, (box, killCount, killRequired, phase, phaseTimer, playerSnapshotCount, waitingGatePos, dungeonGatePos, waitingSpawnPos, rooms, originalGameModes) -> {
+    public static final Codec<ActiveDungeon> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            BoundingBox.CODEC.fieldOf("bounding_box").forGetter(ActiveDungeon::getBoundingBox),
+            Codec.INT.fieldOf("kill_count").forGetter(ActiveDungeon::getKillCount),
+            Codec.INT.fieldOf("kill_required").forGetter(ActiveDungeon::getKillRequired),
+            Codec.STRING.fieldOf("phase").forGetter(d -> d.getPhase().name()),
+            Codec.INT.fieldOf("phase_timer").forGetter(ActiveDungeon::getPhaseTimer),
+            Codec.INT.optionalFieldOf("player_snapshot_count", 0).forGetter(ActiveDungeon::getPlayerSnapshotCount),
+            BlockPos.CODEC.optionalFieldOf("waiting_gate_pos", BlockPos.ZERO)
+                    .forGetter(ActiveDungeon::getWaitingGatePos),
+            BlockPos.CODEC.optionalFieldOf("dungeon_gate_pos", BlockPos.ZERO)
+                    .forGetter(ActiveDungeon::getDungeonGatePos),
+            BlockPos.CODEC.optionalFieldOf("waiting_spawn_pos", BlockPos.ZERO)
+                    .forGetter(ActiveDungeon::getWaitingSpawnPos),
+            RoomEncounter.CODEC.listOf().optionalFieldOf("rooms", List.of()).forGetter(ActiveDungeon::getRooms),
+            Codec.unboundedMap(Codec.STRING, Codec.STRING)
+                    .optionalFieldOf("original_game_modes", Map.of())
+                    .forGetter(ActiveDungeon::getOriginalGameModesForCodec))
+            .apply(instance, (box, killCount, killRequired, phase, phaseTimer, playerSnapshotCount, waitingGatePos,
+                    dungeonGatePos, waitingSpawnPos, rooms, originalGameModes) -> {
                 ActiveDungeon dungeon = new ActiveDungeon(box, killRequired);
                 dungeon.killCount = killCount;
                 dungeon.phase = DungeonPhase.valueOf(phase);
@@ -41,8 +44,7 @@ public class ActiveDungeon {
                 dungeon.rooms.addAll(rooms);
                 dungeon.loadOriginalGameModes(originalGameModes);
                 return dungeon;
-            })
-    );
+            }));
 
     public enum DungeonPhase {
         IDLE, WAITING, PREPARING, ACTIVE, COMPLETED, RESETTING
@@ -70,7 +72,8 @@ public class ActiveDungeon {
     }
 
     public void addPlayer(UUID playerId) {
-        if (!players.contains(playerId)) players.add(playerId);
+        if (!players.contains(playerId))
+            players.add(playerId);
     }
 
     public void removePlayer(UUID playerId) {
@@ -175,17 +178,49 @@ public class ActiveDungeon {
         return phaseTimer <= 0;
     }
 
-    public BoundingBox getBoundingBox() { return boundingBox; }
-    public DungeonPhase getPhase() { return phase; }
-    public void setPhase(DungeonPhase phase) { this.phase = phase; }
-    public int getKillCount() { return killCount; }
-    public int getKillRequired() { return killRequired; }
-    public int getPhaseTimer() { return phaseTimer; }
-    public List<UUID> getPlayers() { return players; }
-    public int getPlayerSnapshotCount() { return playerSnapshotCount; }
-    public BlockPos getWaitingGatePos() { return waitingGatePos; }
-    public BlockPos getDungeonGatePos() { return dungeonGatePos; }
-    public List<RoomEncounter> getRooms() { return rooms; }
+    public BoundingBox getBoundingBox() {
+        return boundingBox;
+    }
+
+    public DungeonPhase getPhase() {
+        return phase;
+    }
+
+    public void setPhase(DungeonPhase phase) {
+        this.phase = phase;
+    }
+
+    public int getKillCount() {
+        return killCount;
+    }
+
+    public int getKillRequired() {
+        return killRequired;
+    }
+
+    public int getPhaseTimer() {
+        return phaseTimer;
+    }
+
+    public List<UUID> getPlayers() {
+        return players;
+    }
+
+    public int getPlayerSnapshotCount() {
+        return playerSnapshotCount;
+    }
+
+    public BlockPos getWaitingGatePos() {
+        return waitingGatePos;
+    }
+
+    public BlockPos getDungeonGatePos() {
+        return dungeonGatePos;
+    }
+
+    public List<RoomEncounter> getRooms() {
+        return rooms;
+    }
 
     public void setWaitingSpawnPos(BlockPos waitingSpawnPos) {
         this.waitingSpawnPos = waitingSpawnPos;

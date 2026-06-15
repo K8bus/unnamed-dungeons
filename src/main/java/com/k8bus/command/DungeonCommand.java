@@ -55,6 +55,19 @@ public class DungeonCommand {
                             .then(Commands.argument("index", IntegerArgumentType.integer(0))
                                     .executes(ctx -> setRoomGate(ctx, IntegerArgumentType.getInteger(ctx, "index")))))
 
+                    // /dungeon setherochest <index> — ustawia hero chest na punkt, na który patrzy gracz
+                    .then(Commands.literal("setherochest")
+                            .then(Commands.argument("index", IntegerArgumentType.integer(0))
+                                    .executes(ctx -> setHeroChest(ctx, IntegerArgumentType.getInteger(ctx, "index")))))
+
+                    // /dungeon load <templateId> <killsRequired> — ładuje strukturę z NBT
+                    .then(Commands.literal("load")
+                            .then(Commands.argument("template", com.mojang.brigadier.arguments.StringArgumentType.string())
+                                    .then(Commands.argument("kills", IntegerArgumentType.integer(1, 1000))
+                                            .executes(ctx -> loadTemplate(ctx,
+                                                    com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "template"),
+                                                    IntegerArgumentType.getInteger(ctx, "kills"))))))
+
                     // /dungeon addroom <size> <wave1> <wave2> <wave3> — dodaje pokój z trzema falami
                     .then(Commands.literal("addroom")
                             .then(Commands.argument("size", IntegerArgumentType.integer(1, 100))
@@ -169,9 +182,9 @@ public class DungeonCommand {
                     BlockPos.ZERO,
                     BlockPos.ZERO,
                     List.of(
-                            new WaveDefinition(wave1),
-                            new WaveDefinition(wave2),
-                            new WaveDefinition(wave3)
+                            new WaveDefinition(wave1, Math.max(1, wave1 / 2)),
+                            new WaveDefinition(wave2, Math.max(1, wave2 / 2)),
+                            new WaveDefinition(wave3, Math.max(1, wave3 / 2))
                     )
             );
 
@@ -228,6 +241,61 @@ public class DungeonCommand {
             return 1;
         } catch (Exception e) {
             ctx.getSource().sendFailure(Component.literal("Błąd: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int setHeroChest(CommandContext<CommandSourceStack> ctx, int index) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            ServerLevel level = (ServerLevel) player.level();
+            ActiveDungeon dungeon = DungeonState.get(level).getDungeonAt(player.blockPosition());
+
+            if (dungeon == null) {
+                ctx.getSource().sendFailure(Component.literal("Nie stoisz w dungeonie."));
+                return 0;
+            }
+
+            if (index >= dungeon.getRooms().size()) {
+                ctx.getSource().sendFailure(Component.literal("Brak pokoju o indeksie " + index));
+                return 0;
+            }
+
+            BlockHitResult hit = getLookedAtBlock(player);
+            if (hit.getType() != HitResult.Type.BLOCK) {
+                ctx.getSource().sendFailure(Component.literal("Patrz na blok."));
+                return 0;
+            }
+
+            BlockPos chestPos = hit.getBlockPos();
+
+            dungeon.getRooms().get(index).setHeroChestPos(chestPos);
+            DungeonState.get(level).setDirty();
+
+            ctx.getSource().sendSuccess(() -> Component.literal("Ustawiono Hero Chest pokoju " + index + ": " + chestPos), false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("Błąd: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int loadTemplate(CommandContext<CommandSourceStack> ctx, String templateIdStr, int kills) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            ServerLevel level = (ServerLevel) player.level();
+            BlockPos pos = player.blockPosition();
+
+            net.minecraft.resources.Identifier templateId = net.minecraft.resources.Identifier.parse(templateIdStr);
+            DungeonTemplateLoader.loadDungeon(level, pos, templateId, kills);
+
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "Pomyślnie załadowano dungeon z szablonu: " + templateId
+            ), false);
+            return 1;
+        } catch (Exception e) {
+            e.printStackTrace();
+            ctx.getSource().sendFailure(Component.literal("Błąd ładowania szablonu: " + e.getMessage()));
             return 0;
         }
     }

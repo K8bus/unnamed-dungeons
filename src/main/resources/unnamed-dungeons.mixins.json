@@ -8,7 +8,12 @@
 		"PoisonMeleeMixin",
 		"PoisonArrowMixin",
 		"NeurotoxicityMixin",
-		"BlockMiningMixin"
+		"BlockMiningMixin",
+		"JunglesWrathMixin",
+		"LifeLeechMixin",
+		"ExplosionMixin",
+		"ThunderingMixin",
+		"VoidStrikeMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

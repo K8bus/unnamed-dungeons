@@ -1,9 +1,10 @@
 {
+  "parent": "minecraft:block/block",
   "credit": "Made with Blockbench",
   "texture_size": [32, 32],
   "textures": {
-    "0": "unnamed-dungeons:item/vfx/vines",
-    "particle": "unnamed-dungeons:item/vfx/vines"
+    "0": "unnamed-dungeons:item/vines",
+    "particle": "unnamed-dungeons:item/vines"
   },
   "elements": [
     {

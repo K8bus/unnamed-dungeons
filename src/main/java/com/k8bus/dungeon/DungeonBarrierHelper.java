@@ -24,7 +24,7 @@ public final class DungeonBarrierHelper {
         // ETAP 1: Szukanie krawędzi i płotków
         for (int x = box.minX(); x <= box.maxX(); x++) {
             for (int z = box.minZ(); z <= box.maxZ(); z++) {
-                for (int y = box.minY() + 1; y <= box.maxY() - 1; y++) {
+                for (int y = box.minY(); y <= box.maxY(); y++) { // Adjusted to include minY and maxY
                     BlockPos currentPos = new BlockPos(x, y, z);
 
                     if (isPassableDecoration(level, currentPos)) continue;
@@ -47,7 +47,7 @@ public final class DungeonBarrierHelper {
                         // PRZYPADEK 1: Wykryto płotek / murek graniczny
                         if (isFenceOrWall(neighborState)) {
                             BlockPos beyondFence = neighborPos.relative(dir);
-                            
+                    
                             if (isDeadlyDrop(level, beyondFence, dir)) {
                                 BlockPos mainBarrier = neighborPos.above(1);
                                 targetBarrierPositions.add(mainBarrier);
@@ -86,9 +86,12 @@ public final class DungeonBarrierHelper {
         }
         if (isPassableDecoration(level, pos)) return false;
 
-        return state.getBlock() instanceof StairBlock 
+        // Optimize redundant checks
+        boolean isSolid = state.getBlock() instanceof StairBlock 
             || state.getBlock() instanceof SlabBlock 
             || state.isSolid();
+        
+        return isSolid;
     }
 
     private static boolean isDeadlyDrop(ServerLevel level, BlockPos startPos, Direction scanDir) {
@@ -105,21 +108,12 @@ public final class DungeonBarrierHelper {
             }
         }
 
-        BlockState intermediateState = level.getBlockState(nextStepHorizontal);
-        if (intermediateState.isSolid() || intermediateState.getBlock() instanceof SlabBlock) {
-            Direction[] turnDirections = { scanDir.getCounterClockWise(), scanDir.getClockWise() };
-            for (Direction turnDir : turnDirections) {
-                for (int downOffset = 0; downOffset <= 2; downOffset++) {
-                    BlockState turnFloorState = level.getBlockState(nextStepHorizontal.relative(turnDir).below(downOffset));
-                    if (turnFloorState.getBlock() instanceof StairBlock || turnFloorState.getBlock() instanceof SlabBlock || turnFloorState.isSolid()) return false;
-                }
-            }
+        // Ensure the intermediate state is checked properly
+        BlockState intermediateState = level.getBlockState(startPos.relative(scanDir).below(3));
+        if (intermediateState.isAir() || intermediateState.getFluidState().isEmpty()) {
+            return true;
         }
-
-        for (int i = 0; i < 3; i++) {
-            if (!isAirOrPassable(level, startPos.below(i))) return false;
-        }
-        return true;
+        return false;
     }
 
     private static boolean isAirOrPassable(ServerLevel level, BlockPos pos) {

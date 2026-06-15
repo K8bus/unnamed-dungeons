@@ -16,7 +16,10 @@ public class DungeonState extends SavedData {
     public static final Codec<DungeonState> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     ActiveDungeon.CODEC.listOf().fieldOf("dungeons")
-                            .forGetter(state -> state.activeDungeons)
+                            .forGetter(state -> state.activeDungeons),
+                    Codec.unboundedMap(net.minecraft.core.UUIDUtil.STRING_CODEC, Codec.INT)
+                            .optionalFieldOf("player_wallets", java.util.Map.of())
+                            .forGetter(state -> state.playerWallets)
             ).apply(instance, DungeonState::new)
     );
 
@@ -28,13 +31,30 @@ public class DungeonState extends SavedData {
     );
 
     private final List<ActiveDungeon> activeDungeons;
+    private final java.util.Map<java.util.UUID, Integer> playerWallets;
 
     public DungeonState() {
         this.activeDungeons = new ArrayList<>();
+        this.playerWallets = new java.util.HashMap<>();
     }
 
-    private DungeonState(List<ActiveDungeon> dungeons) {
+    private DungeonState(List<ActiveDungeon> dungeons, java.util.Map<java.util.UUID, Integer> wallets) {
         this.activeDungeons = new ArrayList<>(dungeons);
+        this.playerWallets = new java.util.HashMap<>(wallets);
+    }
+
+    public int getWalletBalance(java.util.UUID uuid) {
+        return playerWallets.getOrDefault(uuid, 0);
+    }
+
+    public void addWalletBalance(java.util.UUID uuid, int amount) {
+        playerWallets.put(uuid, getWalletBalance(uuid) + amount);
+        setDirty();
+    }
+
+    public void setWalletBalance(java.util.UUID uuid, int amount) {
+        playerWallets.put(uuid, amount);
+        setDirty();
     }
 
     public static DungeonState get(ServerLevel level) {

@@ -26,7 +26,8 @@
       { "when": "8210", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/poison_rise" } },
       { "when": "8211", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/poison_rise" } },
       { "when": "8220", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/trail_segment" } },
-      { "when": "8230", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/pyramid_face" } }
+      { "when": "8230", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/pyramid_face" } },
+      { "when": "8231", "model": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/web_pyramid_face" } }
     ],
     "fallback": { "type": "minecraft:model", "model": "unnamed-dungeons:item/vfx/invisible" }
   }

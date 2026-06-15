@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "unnamed-dungeons:poison",
+    "unnamed-dungeons:poison_arrow",
+    "unnamed-dungeons:deflect",
+    "unnamed-dungeons:anti_venom",
+    "unnamed-dungeons:ricochet"
+  ]
+}
