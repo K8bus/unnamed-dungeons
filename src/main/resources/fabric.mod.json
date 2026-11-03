@@ -2,22 +2,21 @@
 	"schemaVersion": 1,
 	"id": "unnamed-dungeons",
 	"version": "${version}",
-	"name": "Unnamed Dungeons",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Unnamed Dungeons Engine & API",
+	"description": "Instanced Dungeon Engine, 3D Flood-Fill Room Detector, NBT Structure Compiler & Combat VFX API for Fabric.",
 	"authors": [
-		"Me!"
+		"k8bus"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/k8bus/unnamed-dungeons"
 	},
-	"license": "CC0-1.0",
+	"license": "All Rights Reserved",
 	"icon": "assets/unnamed-dungeons/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.k8bus.UnnamedDungeons",
-			"com.k8bus.visual_engine.VisualInitializer"
+			"com.k8bus.UnnamedDungeons"
 		],
 		"client": [
 			"com.k8bus.client.UnnamedDungeonsClient"
@@ -26,18 +25,16 @@
 			"com.k8bus.client.UnnamedDungeonsDataGenerator"
 		]
 	},
-	"accessWidener": "visual_engine.accesswidener",
 	"mixins": [
 		"unnamed-dungeons.mixins.json",
 		{
 			"config": "unnamed-dungeons.client.mixins.json",
 			"environment": "client"
-		},
-		"visual-engine.mixins.json"
+		}
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
-		"minecraft": "~26.1.2",
+		"minecraft": "~26.2",
 		"java": ">=25",
 		"fabric-api": "*"
 	}

@@ -1,0 +1,50 @@
+{
+  "template": "unnamed-dungeons:example_crypt",
+  "kills_required": 30,
+  "eldritch_chest_loot_table": "minecraft:chests/ancient_city",
+  "rooms": {
+    "1": {
+      "reward_loot_table": "minecraft:chests/simple_dungeon",
+      "waves": [
+        {
+          "base_count": 5,
+          "extra_per_player": 2,
+          "mob_pool": [
+            "minecraft:zombie",
+            "minecraft:husk"
+          ]
+        },
+        {
+          "base_count": 8,
+          "extra_per_player": 3,
+          "mob_pool": [
+            "minecraft:skeleton",
+            "minecraft:stray"
+          ]
+        }
+      ]
+    },
+    "2": {
+      "reward_loot_table": "minecraft:chests/bastion_treasure",
+      "waves": [
+        {
+          "base_count": 6,
+          "extra_per_player": 3,
+          "mob_pool": [
+            "minecraft:wither_skeleton",
+            "minecraft:blaze"
+          ]
+        },
+        {
+          "base_count": 10,
+          "extra_per_player": 4,
+          "mob_pool": [
+            "minecraft:vindicator",
+            "minecraft:pillager",
+            "minecraft:breeze"
+          ]
+        }
+      ]
+    }
+  }
+}

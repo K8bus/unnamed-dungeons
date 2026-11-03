@@ -1,7 +1,6 @@
 package com.k8bus.mixin;
 
 import com.k8bus.enchantment.ModEnchantments;
-import com.k8bus.visual_engine.VisualEngine;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
@@ -42,8 +41,9 @@ public abstract class LifeLeechMixin {
             float healAmount = leechLevel * 1.0f;
             livingAttacker.heal(healAmount);
             
-            // Visual effect
-            VisualEngine.get().play("heal_ring", level, livingAttacker.position());
+            // Dungeons Visual Effect
+            com.k8bus.vfx.DungeonsVfx.groundRing(level, livingAttacker.position(), 1.6f, com.k8bus.vfx.VfxTheme.RADIANCE);
+            com.k8bus.vfx.DungeonsVfx.aura(level, livingAttacker, com.k8bus.vfx.VfxTheme.RADIANCE, 25);
         }
     }
 }

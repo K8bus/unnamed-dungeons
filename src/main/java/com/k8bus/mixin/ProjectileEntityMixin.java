@@ -51,6 +51,11 @@ public abstract class ProjectileEntityMixin {
                 double newZ = velocity.x * sin + velocity.z * cos;
                 projectile1.setDeltaMovement(new Vec3(newX, velocity.y * 0.5, newZ));
                 projectile1.needsSync = true;
+
+                if (projectile1.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                    com.k8bus.vfx.DungeonsVfx.projectileTrail(serverLevel, projectile1, com.k8bus.vfx.VfxTheme.DEFLECT);
+                    com.k8bus.vfx.DungeonsVfx.impactBurst(serverLevel, projectile1.position(), projectile1.getDeltaMovement(), com.k8bus.vfx.VfxTheme.DEFLECT);
+                }
             });
         }
     }

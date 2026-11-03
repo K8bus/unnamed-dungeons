@@ -30,9 +30,11 @@ public class ActiveDungeon {
             RoomEncounter.CODEC.listOf().optionalFieldOf("rooms", List.of()).forGetter(ActiveDungeon::getRooms),
             Codec.unboundedMap(Codec.STRING, Codec.STRING)
                     .optionalFieldOf("original_game_modes", Map.of())
-                    .forGetter(ActiveDungeon::getOriginalGameModesForCodec))
+                    .forGetter(ActiveDungeon::getOriginalGameModesForCodec),
+            BlockPos.CODEC.listOf().optionalFieldOf("active_barriers", List.of())
+                    .forGetter(ActiveDungeon::getActiveBarriersList))
             .apply(instance, (box, killCount, killRequired, phase, phaseTimer, playerSnapshotCount, waitingGatePos,
-                    dungeonGatePos, waitingSpawnPos, rooms, originalGameModes) -> {
+                    dungeonGatePos, waitingSpawnPos, rooms, originalGameModes, activeBarriers) -> {
                 ActiveDungeon dungeon = new ActiveDungeon(box, killRequired);
                 dungeon.killCount = killCount;
                 dungeon.phase = DungeonPhase.valueOf(phase);
@@ -43,6 +45,7 @@ public class ActiveDungeon {
                 dungeon.waitingSpawnPos = waitingSpawnPos;
                 dungeon.rooms.addAll(rooms);
                 dungeon.loadOriginalGameModes(originalGameModes);
+                dungeon.activeBarriers.addAll(activeBarriers);
                 return dungeon;
             }));
 
@@ -54,11 +57,12 @@ public class ActiveDungeon {
     private final List<UUID> players = new ArrayList<>();
     private final List<RoomEncounter> rooms = new ArrayList<>();
     private final Map<UUID, GameType> originalGameModes = new HashMap<>();
+    private final java.util.Set<BlockPos> activeBarriers = new java.util.HashSet<>();
 
-    int killCount = 0;
+    public int killCount = 0;
     int killRequired;
-    int phaseTimer = 0;
-    int playerSnapshotCount = 0;
+    public int phaseTimer = 0;
+    public int playerSnapshotCount = 0;
 
     BlockPos waitingGatePos = BlockPos.ZERO;
     BlockPos dungeonGatePos = BlockPos.ZERO;
@@ -240,5 +244,34 @@ public class ActiveDungeon {
 
     public void addRoom(RoomEncounter room) {
         rooms.add(room);
+    }
+
+    public java.util.Set<BlockPos> getActiveBarriers() {
+        return activeBarriers;
+    }
+
+    public List<BlockPos> getActiveBarriersList() {
+        return new ArrayList<>(activeBarriers);
+    }
+
+    public void addActiveBarrier(BlockPos pos) {
+        if (pos != null) {
+            activeBarriers.add(pos);
+        }
+    }
+
+    public void removeActiveBarrier(BlockPos pos) {
+        if (pos != null) {
+            activeBarriers.remove(pos);
+        }
+    }
+
+    public void clearAllBarriers(net.minecraft.server.level.ServerLevel level) {
+        for (BlockPos pos : activeBarriers) {
+            if (level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.BARRIER)) {
+                level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+        activeBarriers.clear();
     }
 }

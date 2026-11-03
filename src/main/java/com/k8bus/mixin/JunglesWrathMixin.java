@@ -38,6 +38,7 @@ public abstract class JunglesWrathMixin {
         if (levelEnchant == 0) return originalDamage;
 
         // Jungle's Wrath: +10% damage per level against poisoned targets
+        com.k8bus.vfx.DungeonsVfx.impactBurst(level, self.position().add(0, self.getBbHeight() * 0.5, 0), livingAttacker.getLookAngle(), com.k8bus.vfx.VfxTheme.VINES);
         return originalDamage * (1.0f + (0.1f * levelEnchant));
     }
 }

@@ -44,5 +44,7 @@ public abstract class PoisonMeleeMixin {
         int duration = durations[Math.min(poisonLevel, 3) - 1];
 
         self.addEffect(new MobEffectInstance(MobEffects.POISON, duration, amplifier));
+        com.k8bus.vfx.DungeonsVfx.impactBurst(level, self.position().add(0, self.getBbHeight() * 0.5, 0), livingAttacker.getLookAngle(), com.k8bus.vfx.VfxTheme.POISON);
+        com.k8bus.vfx.DungeonsVfx.aura(level, self, com.k8bus.vfx.VfxTheme.POISON, duration);
     }
 }

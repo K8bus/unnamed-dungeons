@@ -19,5 +19,11 @@ public class ClientNetworkHandler {
                 ClientDungeonState.walletBalance = payload.balance();
             });
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(com.k8bus.network.DungeonsVfxPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                com.k8bus.client.vfx.ClientVfxManager.spawnVfx(payload);
+            });
+        });
     }
 }

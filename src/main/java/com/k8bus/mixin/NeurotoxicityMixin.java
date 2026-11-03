@@ -43,5 +43,7 @@ public abstract class NeurotoxicityMixin {
         int duration = enchantLevel >= 2 ? 120 : 60; // 3s = 60 ticków, 6s = 120 ticków
 
         self.addEffect(new MobEffectInstance(ModEffects.NEUROTOXICITY, duration, amplifier));
+        com.k8bus.vfx.DungeonsVfx.impactBurst(level, self.position().add(0, self.getBbHeight() * 0.5, 0), livingAttacker.getLookAngle(), com.k8bus.vfx.VfxTheme.POISON);
+        com.k8bus.vfx.DungeonsVfx.aura(level, self, com.k8bus.vfx.VfxTheme.POISON, duration);
     }
 }

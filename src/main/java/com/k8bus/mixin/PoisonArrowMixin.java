@@ -1,7 +1,6 @@
 package com.k8bus.mixin;
 
 import com.k8bus.enchantment.ModEnchantments;
-import com.k8bus.visual_engine.PyramidEnsnareEffect;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
@@ -69,6 +68,8 @@ public abstract class PoisonArrowMixin {
                 int amplifier = level >= 2 ? 1 : 0;
                 cloud.addEffect(new MobEffectInstance(MobEffects.POISON, 60 + level * 20, amplifier));
                 serverLevel.addFreshEntity(cloud);
+
+                com.k8bus.vfx.DungeonsVfx.impactBurst(serverLevel, arrow.position(), new net.minecraft.world.phys.Vec3(0, 1, 0), com.k8bus.vfx.VfxTheme.POISON);
             }
         }
 
@@ -76,14 +77,14 @@ public abstract class PoisonArrowMixin {
             if (vinesHolder.isPresent()) {
                 int level = EnchantmentHelper.getEnchantmentLevel(vinesHolder.get(), livingOwner);
                 if (level > 0) {
-                    PyramidEnsnareEffect.apply(target, 40 + level * 10, PyramidEnsnareEffect.PYRAMID_CMD);
+                    com.k8bus.vfx.DungeonsVfx.ensnare(serverLevel, target, com.k8bus.vfx.VfxTheme.VINES, 40 + level * 10);
                 }
             }
 
             if (webbingHolder.isPresent()) {
                 int levelEnchant = EnchantmentHelper.getEnchantmentLevel(webbingHolder.get(), livingOwner);
                 if (levelEnchant > 0) {
-                    PyramidEnsnareEffect.apply(target, 40 + levelEnchant * 10, 8231); // 8231 is WEBBING CMD
+                    com.k8bus.vfx.DungeonsVfx.ensnare(serverLevel, target, com.k8bus.vfx.VfxTheme.WEBBING, 40 + levelEnchant * 10);
                 }
             }
 
@@ -102,7 +103,7 @@ public abstract class PoisonArrowMixin {
 
                             // Spawn new arrow heading to next target
                             net.minecraft.world.phys.Vec3 dir = nextTarget.position()
-                                    .add(0, nextTarget.getBbHeight() / 2, 0).subtract(arrow.position()).normalize();
+                                     .add(0, nextTarget.getBbHeight() / 2, 0).subtract(arrow.position()).normalize();
 
                             AbstractArrow newArrow = (AbstractArrow) arrow
                                     .getType()
@@ -116,6 +117,8 @@ public abstract class PoisonArrowMixin {
                                         + 1;
 
                                 serverLevel.addFreshEntity(newArrow);
+
+                                com.k8bus.vfx.DungeonsVfx.chain(serverLevel, arrow.position(), nextTarget.position().add(0, nextTarget.getBbHeight() * 0.5, 0), com.k8bus.vfx.VfxTheme.LIGHTNING);
                             }
                         }
                     }

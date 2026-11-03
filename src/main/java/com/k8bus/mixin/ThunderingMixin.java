@@ -6,7 +6,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -39,7 +39,7 @@ public abstract class ThunderingMixin {
         if (thunderingLevel == 0) return;
 
         if (level.getRandom().nextFloat() < 0.20f) { // 20% szansy
-            LightningBolt lightning = EntityType.LIGHTNING_BOLT.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            LightningBolt lightning = EntityTypes.LIGHTNING_BOLT.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             if (lightning != null) {
                 lightning.setPos(target.getX(), target.getY(), target.getZ());
                 lightning.setVisualOnly(true); // Wizualny piorun
@@ -50,7 +50,11 @@ public abstract class ThunderingMixin {
                 java.util.List<LivingEntity> near = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(5.0), e -> e != livingAttacker && e != target && e.isAlive());
                 for (LivingEntity e : near) {
                     e.hurt(level.damageSources().lightningBolt(), aoeDamage);
+                    com.k8bus.vfx.DungeonsVfx.chain(level, target.position().add(0, 0.5, 0), e.position().add(0, 0.5, 0), com.k8bus.vfx.VfxTheme.LIGHTNING);
                 }
+
+                com.k8bus.vfx.DungeonsVfx.impactBurst(level, target.position().add(0, 0.5, 0), new net.minecraft.world.phys.Vec3(0, 1, 0), com.k8bus.vfx.VfxTheme.LIGHTNING);
+                com.k8bus.vfx.DungeonsVfx.groundRing(level, target.position(), 2.8f, com.k8bus.vfx.VfxTheme.LIGHTNING);
             }
         }
     }

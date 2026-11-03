@@ -48,6 +48,9 @@ public abstract class VoidStrikeMixin {
             float bonus = Math.min((diff / 10.0f) * 1.0f, maxBonus);
 
             this.unnamed_dungeons$voidStrikeStartTime = 0;
+
+            com.k8bus.vfx.DungeonsVfx.slashArc(level, livingAttacker, com.k8bus.vfx.VfxTheme.VOID);
+            com.k8bus.vfx.DungeonsVfx.impactBurst(level, target.position().add(0, target.getBbHeight() * 0.5, 0), livingAttacker.getLookAngle(), com.k8bus.vfx.VfxTheme.VOID);
             
             return originalDamage * (1.0f + bonus);
         }

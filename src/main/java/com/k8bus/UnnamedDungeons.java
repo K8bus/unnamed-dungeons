@@ -24,6 +24,7 @@ public class UnnamedDungeons implements ModInitializer {
 		ModBlockEntities.initialize(); // potem block entities
 		ModMenuTypes.initialize();    // potem menu
 		ServerNetworkHandler.initialize();
+		com.k8bus.dungeon.event.DungeonPlayerLifecycleEvents.initialize();
 		DungeonCommand.register();
 		DungeonTickHandler.register();
 		LOGGER.info("Unnamed Dungeons initialized!");

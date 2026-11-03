@@ -13,5 +13,9 @@ public class UnnamedDungeonsClient implements ClientModInitializer {
         ClientNetworkHandler.initialize();
         DungeonHudOverlay.register();
         MenuScreens.register(ModMenuTypes.WALLET_DEPOSIT, WalletDepositScreen::new);
+
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            com.k8bus.client.vfx.ClientVfxManager.tick();
+        });
     }
 }
