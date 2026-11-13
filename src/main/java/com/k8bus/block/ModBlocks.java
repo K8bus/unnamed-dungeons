@@ -9,7 +9,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class ModBlocks {
@@ -18,7 +17,6 @@ public class ModBlocks {
     public static Block WOODEN_DUNGEON_CHEST;
     public static Block HERO_CHEST;
     public static Block ELDRITCH_CHEST;
-    public static Block WALLET_DEPOSIT;
 
     public static void initialize() {
         DUNGEON_GATE = Registry.register(
@@ -55,9 +53,6 @@ public class ModBlocks {
                 .strength(5.0f)
                 .setId(ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(UnnamedDungeons.MOD_ID, "eldritch_chest")))
         ));
-        WALLET_DEPOSIT = registerBlockAndItem("wallet_deposit", new WalletDepositBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)
-                .setId(ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(UnnamedDungeons.MOD_ID, "wallet_deposit")))
-        ));
     }
 
     private static Block registerBlockAndItem(String name, Block block) {
@@ -73,5 +68,4 @@ public class ModBlocks {
         );
         return block;
     }
-
 }

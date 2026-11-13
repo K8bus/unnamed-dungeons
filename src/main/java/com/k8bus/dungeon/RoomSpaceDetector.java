@@ -1,6 +1,5 @@
 package com.k8bus.dungeon;
 
-import com.k8bus.block.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -45,10 +44,9 @@ public class RoomSpaceDetector {
                 if (!visited.contains(neighbor)) {
                     BlockState state = level.getBlockState(neighbor);
 
-                    // Stop at dungeon gates
-                    if (state.is(ModBlocks.DUNGEON_GATE)) {
-                        visited.add(neighbor); // Mark as visited to avoid re-checking, but don't add to queue
-                        // We still want to include the gate in the bounding box
+                    // Stop at dungeon gates (dowolny blok bramy z tagu #unnamed-dungeons:dungeon_gates)
+                    if (DungeonGateHelper.isGateBlock(state)) {
+                        visited.add(neighbor);
                         minX = Math.min(minX, neighbor.getX());
                         minY = Math.min(minY, neighbor.getY());
                         minZ = Math.min(minZ, neighbor.getZ());

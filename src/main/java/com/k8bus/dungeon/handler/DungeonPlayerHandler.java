@@ -6,12 +6,13 @@ import com.k8bus.dungeon.ActiveDungeon;
 import com.k8bus.dungeon.DungeonSpawnpointHelper;
 import com.k8bus.dungeon.DungeonState;
 import com.k8bus.dungeon.RoomEncounter;
+import com.k8bus.network.DungeonHudPayload;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 
 public class DungeonPlayerHandler {
-
-    private static final int WAITING_SECONDS = 30;
 
     public static void handlePlayers(ServerLevel level, ActiveDungeon dungeon, DungeonState state) {
         for (ServerPlayer player : level.players()) {
@@ -22,11 +23,13 @@ public class DungeonPlayerHandler {
             }
 
             if (inBox && !dungeon.hasPlayer(player.getUUID())) {
-                onPlayerEnter(player, dungeon, state);
+                if (DungeonEvents.CAN_ENTER_DUNGEON.invoker().canEnter(level, dungeon, player)) {
+                    onPlayerEnter(player, dungeon, state);
+                }
             } else if (!inBox && dungeon.hasPlayer(player.getUUID())) {
                 onPlayerExit(player, dungeon, state);
             }
-            
+
             if (dungeon.hasPlayer(player.getUUID())) {
                 syncHud(player, dungeon);
             }
@@ -38,22 +41,18 @@ public class DungeonPlayerHandler {
     }
 
     private static void onPlayerEnter(ServerPlayer player, ActiveDungeon dungeon, DungeonState state) {
-        // Check if the player enters any room and start a wave if necessary
-        for (RoomEncounter room : dungeon.getRooms()) {
-            if (room.getPhase() == RoomEncounter.RoomPhase.IDLE && room.getRoomBox().isInside(player.blockPosition())) {
-                room.setPhase(RoomEncounter.RoomPhase.WAVE_ACTIVE);
-                room.onWaveStartClearsActiveMobs();
-                room.startCurrentWave(dungeon.getPlayerSnapshotCount(), (ServerLevel) player.level());
-                state.setDirty();
-                break;
-            }
-        }
+        ServerLevel level = (ServerLevel) player.level();
 
         // Add player to the dungeon
         dungeon.addPlayer(player.getUUID());
 
         if (dungeon.getPhase() == ActiveDungeon.DungeonPhase.IDLE) {
-            dungeon.setPhaseWithTimer(ActiveDungeon.DungeonPhase.WAITING, WAITING_SECONDS);
+            DungeonPhaseHandler.transitionPhaseWithTimer(
+                    level,
+                    dungeon,
+                    ActiveDungeon.DungeonPhase.WAITING,
+                    dungeon.getWaitingSeconds()
+            );
             UnnamedDungeons.LOGGER.info("Dungeon przechodzi do fazy WAITING");
         }
 
@@ -61,20 +60,21 @@ public class DungeonPlayerHandler {
         DungeonSpawnpointHelper.saveAndSetSpawnpoint(player, dungeon.getBoundingBox());
 
         // Save original game mode and set Adventure mode (only if not already adventure)
-        if (dungeon.getOriginalGameMode(player.getUUID()) == null || player.gameMode.getGameModeForPlayer() != net.minecraft.world.level.GameType.ADVENTURE) {
+        if (dungeon.getOriginalGameMode(player.getUUID()) == null || player.gameMode.getGameModeForPlayer() != GameType.ADVENTURE) {
             dungeon.saveOriginalGameMode(player.getUUID(), player.gameMode.getGameModeForPlayer());
         }
-        player.setGameMode(net.minecraft.world.level.GameType.ADVENTURE);
+        player.setGameMode(GameType.ADVENTURE);
 
-        DungeonEvents.PLAYER_CHANGE.invoker().onPlayerChange((ServerLevel) player.level(), dungeon, player, true);
+        DungeonEvents.PLAYER_CHANGE.invoker().onPlayerChange(level, dungeon, player, true);
 
         state.setDirty();
         UnnamedDungeons.LOGGER.info("{} wszedł do dungeonu", player.getName().getString());
     }
 
     private static void onPlayerExit(ServerPlayer player, ActiveDungeon dungeon, DungeonState state) {
+        ServerLevel level = (ServerLevel) player.level();
         dungeon.removePlayer(player.getUUID());
-        DungeonEvents.PLAYER_CHANGE.invoker().onPlayerChange((ServerLevel) player.level(), dungeon, player, false);
+        DungeonEvents.PLAYER_CHANGE.invoker().onPlayerChange(level, dungeon, player, false);
 
         // W fazie RESETTING gracze zostali już obsłużeni przez resignDungeon — nie przywracamy ponownie
         if (dungeon.getPhase() == ActiveDungeon.DungeonPhase.RESETTING) {
@@ -89,7 +89,7 @@ public class DungeonPlayerHandler {
         dungeon.clearOriginalGameMode(player.getUUID());
 
         // Wyczyść HUD klienta
-        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new com.k8bus.network.DungeonHudPayload(0, 0, 0));
+        ServerPlayNetworking.send(player, new DungeonHudPayload(0, 0, 0));
 
         state.setDirty();
         UnnamedDungeons.LOGGER.info("{} wyszedł z dungeonu", player.getName().getString());
@@ -116,6 +116,6 @@ public class DungeonPlayerHandler {
             phaseTimer = dungeon.getPhaseTimer();
         }
 
-        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new com.k8bus.network.DungeonHudPayload(wave, mobs, phaseTimer));
+        ServerPlayNetworking.send(player, new DungeonHudPayload(wave, mobs, phaseTimer));
     }
 }

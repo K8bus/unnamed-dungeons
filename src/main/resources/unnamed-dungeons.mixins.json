@@ -3,17 +3,10 @@
 	"package": "com.k8bus.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"ProjectileEntityMixin",
-		"AntiVenomMixin",
-		"PoisonMeleeMixin",
-		"PoisonArrowMixin",
-		"NeurotoxicityMixin",
 		"BlockMiningMixin",
-		"JunglesWrathMixin",
-		"LifeLeechMixin",
-		"ExplosionMixin",
-		"ThunderingMixin",
-		"VoidStrikeMixin"
+		"BlockPlacementMixin",
+		"BucketPlacementMixin",
+		"ExplosionMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

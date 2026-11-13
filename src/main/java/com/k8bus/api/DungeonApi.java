@@ -1,6 +1,7 @@
 package com.k8bus.api;
 
 import com.k8bus.dungeon.ActiveDungeon;
+import com.k8bus.dungeon.DungeonGateHelper;
 import com.k8bus.dungeon.DungeonJsonDefinition;
 import com.k8bus.dungeon.DungeonJsonManager;
 import com.k8bus.dungeon.DungeonState;
@@ -53,6 +54,22 @@ public final class DungeonApi {
     }
 
     /**
+     * Usuwa podany dungeon ze stanu świata (czyści bariery i moby).
+     */
+    public static boolean removeDungeon(ServerLevel level, ActiveDungeon dungeon) {
+        DungeonState state = DungeonState.get(level);
+        if (!state.getActiveDungeons().contains(dungeon)) {
+            return false;
+        }
+        dungeon.clearAllBarriers(level);
+        for (RoomEncounter room : dungeon.getRooms()) {
+            room.clearSpawnedMobs(level);
+        }
+        state.removeDungeon(dungeon);
+        return true;
+    }
+
+    /**
      * Tworzy i rejestruje prosty dungeon na podstawie BoundingBoxa i wymaganej liczby zabójstw.
      */
     public static ActiveDungeon createDungeon(ServerLevel level, BoundingBox box, int killsRequired) {
@@ -64,8 +81,15 @@ public final class DungeonApi {
      * Wczytuje i stawia strukturę dungeonu z pliku .nbt wraz z automatycznym parsowaniem metadanych Structure Blocków
      * oraz nałożeniem definicji JSON (z data/<namespace>/dungeons/<path>.json), jeśli istnieje.
      */
-    public static void spawnFromTemplate(ServerLevel level, BlockPos origin, Identifier templateOrJsonId, int killsRequired, Rotation rotation) {
-        DungeonTemplateLoader.loadDungeon(level, origin, templateOrJsonId, killsRequired, rotation);
+    public static ActiveDungeon spawnFromTemplate(ServerLevel level, BlockPos origin, Identifier templateOrJsonId, int killsRequired, Rotation rotation) {
+        return DungeonTemplateLoader.loadDungeon(level, origin, templateOrJsonId, killsRequired, rotation);
+    }
+
+    /**
+     * Wczytuje i stawia strukturę dungeonu z pliku .nbt z domyślną liczbą zabójstw (30 lub wartością z JSON).
+     */
+    public static ActiveDungeon spawnFromTemplate(ServerLevel level, BlockPos origin, Identifier templateOrJsonId, Rotation rotation) {
+        return DungeonTemplateLoader.loadDungeon(level, origin, templateOrJsonId, 30, rotation);
     }
 
     /**
@@ -76,14 +100,77 @@ public final class DungeonApi {
     }
 
     /**
-     * Eksportuje konfigurację pokoi i fal istniejącego dungeonu do pliku JSON w folderze świata.
+     * Nakłada wczytaną definicję JSON (fale, moby, loot table, czasy, powtarzalność i rozmiary bram) na istniejący dungeon.
+     */
+    public static void applyJsonDefinition(ServerLevel level, ActiveDungeon dungeon, DungeonJsonDefinition definition) {
+        DungeonTemplateLoader.applyJsonToActiveDungeon(level, dungeon, definition);
+        DungeonState.get(level).setDirty();
+    }
+
+    /**
+     * Wczytuje i nakłada definicję JSON o podanym ID na istniejący dungeon.
+     */
+    public static boolean applyJson(ServerLevel level, ActiveDungeon dungeon, Identifier jsonId) {
+        Optional<DungeonJsonDefinition> defOpt = DungeonJsonManager.loadDefinition(level.getServer(), jsonId);
+        if (defOpt.isEmpty()) {
+            return false;
+        }
+        applyJsonDefinition(level, dungeon, defOpt.get());
+        return true;
+    }
+
+    /**
+     * Eksportuje konfigurację pokoi, fal, czasów i bram istniejącego dungeonu do pliku JSON w folderze świata.
      */
     public static Path exportDungeonToJson(MinecraftServer server, ActiveDungeon dungeon, Identifier id, Optional<Identifier> templateId) throws IOException {
         return DungeonJsonManager.exportDungeonToJson(server, dungeon, id, templateId);
     }
 
     /**
-     * Automatycznie wykrywa zamkniętą przestrzeń pokoju (algorytmem BFS 3D do ścian i bram DungeonGate)
+     * Eksportuje konfigurację pokoi, fal, czasów i bram (włącznie z rozmiarami BlockEntity bram na świecie) do pliku JSON.
+     */
+    public static Path exportDungeonToJson(MinecraftServer server, ServerLevel level, ActiveDungeon dungeon, Identifier id, Optional<Identifier> templateId) throws IOException {
+        return DungeonJsonManager.exportDungeonToJson(server, level, dungeon, id, templateId);
+    }
+
+    /**
+     * Ustawia, czy dungeon po ukończeniu ma automatycznie resetować się do kolejnego przejścia ({@code true}),
+     * czy zostać usunięty po otwarciu bram ({@code false}).
+     */
+    public static void setRepeatable(ServerLevel level, ActiveDungeon dungeon, boolean repeatable) {
+        dungeon.setRepeatable(repeatable);
+        DungeonState.get(level).setDirty();
+    }
+
+    /**
+     * Konfiguruje czasy faz i przerw między falami (w sekundach) indywidualnie dla danej instancji dungeonu.
+     */
+    public static void configureTimings(
+            ServerLevel level,
+            ActiveDungeon dungeon,
+            int waitingSeconds,
+            int preparingSeconds,
+            int completionSeconds,
+            int betweenWavesMinSeconds,
+            int betweenWavesMaxSeconds
+    ) {
+        dungeon.setTimings(waitingSeconds, preparingSeconds, completionSeconds, betweenWavesMinSeconds, betweenWavesMaxSeconds);
+        DungeonState.get(level).setDirty();
+    }
+
+    /**
+     * Ustawia indywidualny rozmiar bariery ({@code width x height}) dla bloku bramy (#unnamed-dungeons:dungeon_gates).
+     */
+    public static boolean setGateBarrierSize(ServerLevel level, BlockPos gatePos, int width, int height) {
+        boolean updated = DungeonGateHelper.setGateSize(level, gatePos, width, height);
+        if (updated) {
+            DungeonState.get(level).setDirty();
+        }
+        return updated;
+    }
+
+    /**
+     * Automatycznie wykrywa zamkniętą przestrzeń pokoju (algorytmem BFS 3D do ścian i bram #unnamed-dungeons:dungeon_gates)
      * i dodaje nowy pokój z podanymi falami do istniejącego dungeonu.
      */
     public static RoomEncounter detectAndAddRoom(ServerLevel level, ActiveDungeon dungeon, BlockPos startPos, List<WaveDefinition> waves) {
@@ -95,7 +182,7 @@ public final class DungeonApi {
     }
 
     /**
-     * Resetuje podany dungeon do stanu początkowego (usuwa moby, otwiera bramę poczekalni, przywraca graczy).
+     * Resetuje podany dungeon do stanu początkowego (usuwa moby, przywraca skrzynie, otwiera kratę poczekalni, przywraca graczy).
      */
     public static void resetDungeon(ServerLevel level, ActiveDungeon dungeon) {
         DungeonPhaseHandler.resetDungeon(level, dungeon, DungeonState.get(level));

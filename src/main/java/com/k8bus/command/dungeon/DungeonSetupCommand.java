@@ -1,8 +1,8 @@
 package com.k8bus.command.dungeon;
 
-import com.k8bus.block.ModBlocks;
 import com.k8bus.command.DungeonCommandUtils;
 import com.k8bus.dungeon.ActiveDungeon;
+import com.k8bus.dungeon.DungeonGateHelper;
 import com.k8bus.dungeon.DungeonState;
 import com.k8bus.dungeon.RoomEncounter;
 import com.k8bus.dungeon.WaveDefinition;
@@ -42,15 +42,15 @@ public class DungeonSetupCommand {
             BlockHitResult hitResult = DungeonCommandUtils.getLookedAtBlock(player);
 
             if (hitResult.getType() != HitResult.Type.BLOCK) {
-                ctx.getSource().sendFailure(Component.literal("Musisz patrzeć na blok kraty."));
+                ctx.getSource().sendFailure(Component.literal("Musisz patrzeć na blok bramy."));
                 return 0;
             }
 
             BlockPos gatePos = hitResult.getBlockPos();
             BlockState gateState = level.getBlockState(gatePos);
 
-            if (!gateState.is(ModBlocks.DUNGEON_GATE)) {
-                ctx.getSource().sendFailure(Component.literal("Wybrany blok nie jest Dungeon Gate."));
+            if (!DungeonGateHelper.isGateBlock(gateState)) {
+                ctx.getSource().sendFailure(Component.literal("Wybrany blok nie jest bramą dungeonu (#unnamed-dungeons:dungeon_gates)."));
                 return 0;
             }
 
@@ -73,7 +73,7 @@ public class DungeonSetupCommand {
     public static int setRoomGate(CommandContext<CommandSourceStack> ctx, int index) {
         try {
             ServerPlayer player = ctx.getSource().getPlayerOrException();
-            ServerLevel level = (ServerLevel) player.level();
+            ServerLevel level = player.level();
             ActiveDungeon dungeon = DungeonState.get(level).getDungeonAt(player.blockPosition());
 
             if (dungeon == null) {
@@ -88,13 +88,13 @@ public class DungeonSetupCommand {
 
             BlockHitResult hit = DungeonCommandUtils.getLookedAtBlock(player);
             if (hit.getType() != HitResult.Type.BLOCK) {
-                ctx.getSource().sendFailure(Component.literal("Patrz na blok kraty."));
+                ctx.getSource().sendFailure(Component.literal("Patrz na blok bramy."));
                 return 0;
             }
 
             BlockPos gatePos = hit.getBlockPos();
-            if (!level.getBlockState(gatePos).is(ModBlocks.DUNGEON_GATE)) {
-                ctx.getSource().sendFailure(Component.literal("Wybrany blok nie jest Dungeon Gate."));
+            if (!DungeonGateHelper.isGateBlock(level.getBlockState(gatePos))) {
+                ctx.getSource().sendFailure(Component.literal("Wybrany blok nie jest bramą dungeonu (#unnamed-dungeons:dungeon_gates)."));
                 return 0;
             }
 
@@ -109,10 +109,62 @@ public class DungeonSetupCommand {
         }
     }
 
+    public static int setGateSize(CommandContext<CommandSourceStack> ctx, int width, int height) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            ServerLevel level = player.level();
+
+            BlockHitResult hit = DungeonCommandUtils.getLookedAtBlock(player);
+            if (hit.getType() != HitResult.Type.BLOCK) {
+                ctx.getSource().sendFailure(Component.literal("Patrz na blok bramy."));
+                return 0;
+            }
+
+            BlockPos gatePos = hit.getBlockPos();
+            if (!DungeonGateHelper.setGateSize(level, gatePos, width, height)) {
+                ctx.getSource().sendFailure(Component.literal("Wybrany blok nie jest bramą dungeonu (#unnamed-dungeons:dungeon_gates)."));
+                return 0;
+            }
+
+            DungeonState.get(level).setDirty();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "Ustawiono rozmiar barier bramy w " + gatePos + " na " + width + "x" + height
+            ), false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("Błąd: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    public static int setRepeatable(CommandContext<CommandSourceStack> ctx, boolean repeatable) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            ServerLevel level = player.level();
+            ActiveDungeon dungeon = DungeonState.get(level).getDungeonAt(player.blockPosition());
+
+            if (dungeon == null) {
+                ctx.getSource().sendFailure(Component.literal("Musisz stać wewnątrz dungeonu."));
+                return 0;
+            }
+
+            dungeon.setRepeatable(repeatable);
+            DungeonState.get(level).setDirty();
+
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "Tryb powtarzalny (repeatable) dungeonu: " + repeatable
+            ), false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("Błąd: " + e.getMessage()));
+            return 0;
+        }
+    }
+
     public static int setHeroChest(CommandContext<CommandSourceStack> ctx, int index) {
         try {
             ServerPlayer player = ctx.getSource().getPlayerOrException();
-            ServerLevel level = (ServerLevel) player.level();
+            ServerLevel level = player.level();
             ActiveDungeon dungeon = DungeonState.get(level).getDungeonAt(player.blockPosition());
 
             if (dungeon == null) {

@@ -8,7 +8,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 public class DungeonHudOverlay implements HudElement {
@@ -22,35 +21,34 @@ public class DungeonHudOverlay implements HudElement {
         if (client.player == null) {
             return;
         }
+        if (ClientDungeonState.waveCounter <= 0 && ClientDungeonState.phaseTimer <= 0) {
+            return;
+        }
 
         Font font = client.font;
         int width = client.getWindow().getGuiScaledWidth();
         int y = 5;
 
-        // Content
         String dungeonName = ClientDungeonState.dungeonName;
-        String waveText = ClientDungeonState.waveCounter > 0 ? "Wave: " + ClientDungeonState.waveCounter + " | Mobs: " + ClientDungeonState.aliveMobs : "Waiting for players...";
-        String walletText = String.valueOf(ClientDungeonState.walletBalance);
+        String waveText = ClientDungeonState.waveCounter > 0
+                ? "Wave: " + ClientDungeonState.waveCounter + " | Mobs: " + ClientDungeonState.aliveMobs
+                : "Waiting for players...";
 
-        // Dimensions
         int iconSize = 16;
         int padding = 4;
         int gap = 4;
 
         int w1 = iconSize + padding + font.width(dungeonName);
         int w2 = iconSize + padding + font.width(waveText);
-        int w3 = iconSize + padding + font.width(walletText);
 
-        int totalWidth = w1 + w2 + w3 + gap * 2;
+        int totalWidth = w1 + w2 + gap;
         int startX = (width - totalWidth) / 2;
 
-        // Render Pills
         drawPill(graphics, font, startX, y, w1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COMPASS), dungeonName, 0xFFFFFF);
         drawPill(graphics, font, startX + w1 + gap, y, w2, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CLOCK), waveText, 0xFFFFFF);
-        drawPill(graphics, font, startX + w1 + gap + w2 + gap, y, w3, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EMERALD), walletText, 0x55FF55);
-        
+
         if (ClientDungeonState.phaseTimer > 0) {
-            int seconds = ClientDungeonState.phaseTimer / 20;
+            int seconds = (ClientDungeonState.phaseTimer / 20) + 1;
             String waitingTitle = "Dungeon starts in: " + seconds + "s";
             int tw = font.width(waitingTitle) * 2;
             int tx = (width - tw) / 2;
@@ -65,14 +63,9 @@ public class DungeonHudOverlay implements HudElement {
     private void drawPill(GuiGraphicsExtractor graphics, Font font, int x, int y, int width, net.minecraft.world.item.ItemStack icon, String text, int textColor) {
         int height = 20;
         int padding = 2;
-        
-        // Background
-        graphics.fill(x, y, x + width + padding * 4, y + height, 0xB0000000); // darker background
-        
-        // Icon
+
+        graphics.fill(x, y, x + width + padding * 4, y + height, 0xB0000000);
         graphics.item(icon, x + padding, y + padding);
-        
-        // Text
         graphics.text(font, text, x + padding + 16 + padding * 2, y + 6, textColor);
     }
 }

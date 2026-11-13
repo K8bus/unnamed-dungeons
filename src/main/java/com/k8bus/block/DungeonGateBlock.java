@@ -27,20 +27,37 @@ public class DungeonGateBlock extends BaseEntityBlock {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
 
+    private final int defaultBarrierWidth;
+    private final int defaultBarrierHeight;
+
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
     public DungeonGateBlock(BlockBehaviour.Properties properties) {
+        this(properties, 0, 0);
+    }
+
+    public DungeonGateBlock(BlockBehaviour.Properties properties, int defaultBarrierWidth, int defaultBarrierHeight) {
         super(properties);
+        this.defaultBarrierWidth = Math.max(0, defaultBarrierWidth);
+        this.defaultBarrierHeight = Math.max(0, defaultBarrierHeight);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(OPEN, false));
     }
 
     public DungeonGateBlock() {
         this(BlockBehaviour.Properties.of()
                 .strength(-1.0f, 3600000.0f)
-                .noOcclusion());
+                .noOcclusion(), 0, 0);
+    }
+
+    public int getDefaultBarrierWidth() {
+        return defaultBarrierWidth;
+    }
+
+    public int getDefaultBarrierHeight() {
+        return defaultBarrierHeight;
     }
 
     @Override
@@ -78,8 +95,8 @@ public class DungeonGateBlock extends BaseEntityBlock {
             com.k8bus.dungeon.DungeonState dungeonState = com.k8bus.dungeon.DungeonState.get(serverLevel);
             com.k8bus.dungeon.ActiveDungeon dungeon = dungeonState.getDungeonAt(pos);
             if (dungeon != null && dungeon.getPhase() == com.k8bus.dungeon.ActiveDungeon.DungeonPhase.WAITING) {
-                if (dungeon.getPhaseTimer() > 60) { // jeśli zostało więcej niż 3 sekundy
-                    dungeon.phaseTimer = 60; // skróć do 3s
+                if (dungeon.getPhaseTimer() > 3) { // jeśli zostało więcej niż 3 sekundy
+                    dungeon.phaseTimer = 3; // skróć do 3s
                     dungeonState.setDirty();
 
                     for (java.util.UUID pId : dungeon.getPlayers()) {

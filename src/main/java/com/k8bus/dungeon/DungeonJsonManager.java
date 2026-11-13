@@ -9,6 +9,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.level.storage.LevelResource;
@@ -73,27 +74,59 @@ public final class DungeonJsonManager {
     }
 
     /**
-     * Eksportuje aktualnie skonfigurowany w grze ActiveDungeon (wraz z jego pokojami, falami i pulami mobów)
+     * Eksportuje aktualnie skonfigurowany w grze ActiveDungeon (wraz z jego pokojami, falami, pulami mobów i czasami)
      * do gotowego pliku JSON w katalogu świata (<world>/dungeons/<namespace>/<path>.json).
      */
     public static Path exportDungeonToJson(MinecraftServer server, ActiveDungeon dungeon, Identifier id, Optional<Identifier> templateId) throws IOException {
+        return exportDungeonToJson(server, null, dungeon, id, templateId);
+    }
+
+    public static Path exportDungeonToJson(MinecraftServer server, ServerLevel level, ActiveDungeon dungeon, Identifier id, Optional<Identifier> templateId) throws IOException {
         Map<String, DungeonJsonDefinition.RoomJsonConfig> roomsMap = new LinkedHashMap<>();
 
         for (int i = 0; i < dungeon.getRooms().size(); i++) {
             RoomEncounter room = dungeon.getRooms().get(i);
+            Optional<DungeonJsonDefinition.GateSizeConfig> roomGateSize = level != null
+                    ? DungeonGateHelper.getConfiguredGateSize(level, room.getRewardGatePos())
+                            .map(sz -> new DungeonJsonDefinition.GateSizeConfig(sz.width(), sz.height()))
+                    : Optional.empty();
+
             roomsMap.put(
                     String.valueOf(i + 1),
                     new DungeonJsonDefinition.RoomJsonConfig(
                             room.getWaves(),
-                            Optional.ofNullable(room.getRewardLootTable())
+                            Optional.ofNullable(room.getRewardLootTable()),
+                            roomGateSize
                     )
             );
         }
 
+        Optional<DungeonJsonDefinition.GateSizeConfig> waitingGateSize = level != null
+                ? DungeonGateHelper.getConfiguredGateSize(level, dungeon.getWaitingGatePos())
+                        .map(sz -> new DungeonJsonDefinition.GateSizeConfig(sz.width(), sz.height()))
+                : Optional.empty();
+
+        Optional<DungeonJsonDefinition.GateSizeConfig> dungeonGateSize = level != null
+                ? DungeonGateHelper.getConfiguredGateSize(level, dungeon.getDungeonGatePos())
+                        .map(sz -> new DungeonJsonDefinition.GateSizeConfig(sz.width(), sz.height()))
+                : Optional.empty();
+
+        DungeonJsonDefinition.TimingsConfig timings = new DungeonJsonDefinition.TimingsConfig(
+                dungeon.getWaitingSeconds(),
+                dungeon.getPreparingSeconds(),
+                dungeon.getCompletionSeconds(),
+                dungeon.getBetweenWavesMinSeconds(),
+                dungeon.getBetweenWavesMaxSeconds()
+        );
+
         DungeonJsonDefinition def = new DungeonJsonDefinition(
                 templateId,
                 dungeon.getKillRequired(),
-                Optional.empty(),
+                dungeon.isRepeatable(),
+                Optional.of(timings),
+                waitingGateSize,
+                dungeonGateSize,
+                Optional.ofNullable(dungeon.getEldritchChestLootTable()),
                 roomsMap
         );
 

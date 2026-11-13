@@ -1,8 +1,6 @@
 {
-  "enchantment.unnamed-dungeons.deflect": "Deflect",
-  "enchantment.unnamed-dungeons.anti_venom": "Anti Venom",
-  "enchantment.unnamed-dungeons.poison": "Poison",
-  "enchantment.unnamed-dungeons.poison_arrow": "Poison Arrow",
-  "enchantment.unnamed-dungeons.neurotoxicity": "Neurotoxicity",
-  "effect.unnamed-dungeons.neurotoxicity": "Neurotoxicity"
+  "block.unnamed-dungeons.dungeon_gate": "Dungeon Gate",
+  "block.unnamed-dungeons.wooden_dungeon_chest": "Wooden Dungeon Chest",
+  "block.unnamed-dungeons.hero_chest": "Hero Chest",
+  "block.unnamed-dungeons.eldritch_chest": "Eldritch Chest"
 }

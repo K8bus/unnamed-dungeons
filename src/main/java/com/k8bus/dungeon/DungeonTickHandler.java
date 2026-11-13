@@ -8,6 +8,8 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 
+import java.util.ArrayList;
+
 public class DungeonTickHandler {
 
     public static void register() {
@@ -22,11 +24,11 @@ public class DungeonTickHandler {
         for (ServerLevel level : server.getAllLevels()) {
             DungeonState state = DungeonState.get(level);
 
-            for (ActiveDungeon dungeon : state.getActiveDungeons()) {
-                if (dungeon.getPhase() == ActiveDungeon.DungeonPhase.COMPLETED) continue;
-
+            for (ActiveDungeon dungeon : new ArrayList<>(state.getActiveDungeons())) {
                 DungeonPhaseHandler.tickPhase(level, dungeon, state);
-                DungeonPlayerHandler.handlePlayers(level, dungeon, state);
+                if (state.getActiveDungeons().contains(dungeon)) {
+                    DungeonPlayerHandler.handlePlayers(level, dungeon, state);
+                }
             }
         }
     }

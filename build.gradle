@@ -86,15 +86,3 @@ publishing {
 		// retrieving dependencies.
 	}
 }
-
-task printMethods(type: JavaExec) {
-    classpath = sourceSets.client.runtimeClasspath
-    mainClass = 'PrintMethods'
-}
-
-
-task printScreenMethods(type: JavaExec) {
-    classpath = sourceSets.client.runtimeClasspath
-    mainClass = "PrintScreenMethods"
-}
-

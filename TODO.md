@@ -1,27 +1,16 @@
-# Unnamed Dungeons - To Do List
+# Unnamed Dungeons Engine & API - To Do List
 
-## Jungle Outpost (WIP)
-- [ ] Zdecydować o systemie generacji struktur (DungeonTemplateLoader vs gotowe struktury NBT).
-- [ ] Zaprojektować i zaimplementować struktury NBT:
-  - Górny camp
-  - Dolne katakumby
-  - Pokoje ze skrzynkami (Hero Chest rooms)
-  - Centralny pokój z Eldritch Chest
-- [ ] Oskryptować powiązanie spawnów mobów i fal (WaveDefinition) z konkretnymi miejscami w strukturze NBT.
+> Content (enchanty, efekty, Wpłatomat/ekonomia oraz Jungle Outpost) został przeniesiony na osobny branch `content`, aby `main` pozostał czystym silnikiem i API dungeonów.
 
-## Enchanty (Beta v1 & Kolejne Tiery)
-- [ ] Przetestować zbalansowanie obecnych enchantów w grze (Poison, Vines, Webbing, Thundering, Ricochet, Void Strike, Life Leech, Jungles Wrath).
-- [ ] Dodać brakujące efekty cząsteczkowe (Shine VFX) i kolory dla enchantów.
-- [ ] Zaimplementować resztę enchantów z planu:
-  - Common: Tempo Theft, Surprise Gift, Radiance, Wiatr, Ziemia, Ogień
-  - Powerful: Death Barter, Chain Reaction, Committed, Ogień (Nether), Freeze, Thunderstrike (Mace)
-  - Kontr-enchanty na zbroję: Energetic Discharge, Lightning Protection, Freeze Protection, Poison Protection, Wind Protection, AntiVenom, Deflect.
-- [ ] Zaprojektować modyfikator szansy 15% z Eldritch Chest.
+## Silnik i API (zrealizowane)
+- [x] Tag bloków bram `#unnamed-dungeons:dungeon_gates` oraz obsługa customowych bram i wariantów `facing` / `open` w resource packach.
+- [x] Konfigurowalne rozmiary barier bram (`width x height`) przez `DungeonGateBlock`, `DungeonGateBlockEntity`, komendę `/dungeon setgatesize`, NBT, JSON i `DungeonApi`.
+- [x] Tryb powtarzalny (`repeatable`) oraz sterowane per-dungeon czasy (`timings` w JSON i `DungeonApi.configureTimings`).
+- [x] Rozszerzone `DungeonEvents` (`CAN_ENTER_DUNGEON`, `DUNGEON_PHASE_CHANGE`, `WAVE_COMPLETE`, `CHEST_OPENED`).
+- [x] Ochrona terenu (niszczenie, stawianie bloków, rozlewanie płynów z wiader, eksplozje) oraz przywracanie skrzyń przy `reset`, `resign` i ukończeniu `repeatable`.
+- [x] Poprawka startu pokojów/fal (uruchamiane wyłącznie w fazie `ACTIVE` przez `DungeonRoomHandler`).
 
-## Economy & HUD
-- [ ] Dopracować Wpłatomat i GUI (zależnie od potrzeb).
-- [ ] Upiększyć HUD poczekalni i fal – ewentualnie podmienić ikony z domyślnych (Kompas/Zegarek/Emerald) na customowe grafiki.
-
-## Różne
-- [ ] Optymalizacja systemu resetowania dungeonu i przywracania bloków (DungeonBarrierHelper itp.).
-- [ ] Ewentualne dodanie Iceberg API na nowo w przyszłości (lub usunięcie pozostałości z innych miejsc, o ile będą takie decyzje).
+## Przed wydaniem / dalsze kroki
+- [ ] Test na żywo w grze (pełne przejście `WAITING` -> `PREPARING` -> `ACTIVE` -> `COMPLETED` / `repeatable`, `/dungeon reset`, `/dungeon resign`, ochrona bloków/wiader).
+- [ ] Podpięcie docelowych modeli 3D / tekstur dla `dungeon_gate` (`dungeon_gate.json` / `dungeon_gate_open.json`) oraz ewentualne zastąpienie tymczasowych grafik w HUD.
+- [ ] Opcjonalne wydzielenie `DungeonsVfx` do osobnego moda / biblioteki.

@@ -18,11 +18,11 @@ import java.util.Optional;
 
 public class DungeonTemplateLoader {
 
-    public static void loadDungeon(ServerLevel level, BlockPos origin, Identifier templateId, int killsRequired) {
-        loadDungeon(level, origin, templateId, killsRequired, Rotation.NONE);
+    public static ActiveDungeon loadDungeon(ServerLevel level, BlockPos origin, Identifier templateId, int killsRequired) {
+        return loadDungeon(level, origin, templateId, killsRequired, Rotation.NONE);
     }
 
-    public static void loadDungeon(ServerLevel level, BlockPos origin, Identifier templateId, int killsRequired, Rotation rotation) {
+    public static ActiveDungeon loadDungeon(ServerLevel level, BlockPos origin, Identifier templateId, int killsRequired, Rotation rotation) {
         // Automatycznie sprawdź, czy istnieje definicja JSON dla tego identyfikatora (w datapacku lub folderze świata)
         Optional<DungeonJsonDefinition> jsonDefOpt = DungeonJsonManager.loadDefinition(level.getServer(), templateId);
 
@@ -53,17 +53,24 @@ public class DungeonTemplateLoader {
 
         for (StructureTemplate.StructureBlockInfo info : blocks) {
             if (info.nbt() != null && info.nbt().contains("metadata")) {
-                Object metaObj = info.nbt().getString("metadata");
-                String meta = metaObj instanceof Optional ? ((Optional<?>) metaObj).map(Object::toString).orElse("") : metaObj.toString();
+                String meta = info.nbt().getString("metadata").orElse("");
                 BlockPos worldPos = info.pos();
                 parseMetadata(meta, worldPos, data);
             }
         }
 
-        // Jeśli wczytano plik JSON, nałóż jego definicje fal, mobów i loot table'i na odczytane pokoje z NBT
+        // Jeśli wczytano plik JSON, nałóż jego definicje fal, mobów, loot table'i i rozmiarów bram
         if (jsonDefOpt.isPresent()) {
             DungeonJsonDefinition jsonDef = jsonDefOpt.get();
             jsonDef.eldritchChestLootTable().ifPresent(loot -> data.eldritchChestLootTable = loot);
+            jsonDef.waitingGateSize().ifPresent(sz -> {
+                data.waitingGateWidth = sz.width();
+                data.waitingGateHeight = sz.height();
+            });
+            jsonDef.dungeonGateSize().ifPresent(sz -> {
+                data.dungeonGateWidth = sz.width();
+                data.dungeonGateHeight = sz.height();
+            });
 
             for (Map.Entry<String, DungeonJsonDefinition.RoomJsonConfig> entry : jsonDef.rooms().entrySet()) {
                 try {
@@ -76,6 +83,10 @@ public class DungeonTemplateLoader {
                         roomData.waves.addAll(roomJson.waves());
                     }
                     roomJson.rewardLootTable().ifPresent(loot -> roomData.heroChestLootTable = loot);
+                    roomJson.rewardGateSize().ifPresent(sz -> {
+                        roomData.rewardGateWidth = sz.width();
+                        roomData.rewardGateHeight = sz.height();
+                    });
                 } catch (NumberFormatException ignored) {}
             }
         }
@@ -89,24 +100,37 @@ public class DungeonTemplateLoader {
             level.setBlock(worldPos, Blocks.AIR.defaultBlockState(), 3);
         }
 
-        // Walidacja BoundingBoxa
-        if (data.dungeonBoxStart == null || data.dungeonBoxEnd == null) {
-            // Automatyczny fallback na rozmiar szablonu, jeśli budowniczy nie postawił markerów boxa
-            net.minecraft.core.Vec3i size = template.getSize();
-            data.dungeonBoxStart = origin;
-            data.dungeonBoxEnd = origin.offset(size.getX() - 1, size.getY() - 1, size.getZ() - 1);
+        // Walidacja BoundingBoxa (uwzględnia rotację w fallbacku)
+        BoundingBox dungeonBox;
+        if (data.dungeonBoxStart != null && data.dungeonBoxEnd != null) {
+            dungeonBox = new BoundingBox(
+                    Math.min(data.dungeonBoxStart.getX(), data.dungeonBoxEnd.getX()),
+                    Math.min(data.dungeonBoxStart.getY(), data.dungeonBoxEnd.getY()),
+                    Math.min(data.dungeonBoxStart.getZ(), data.dungeonBoxEnd.getZ()),
+                    Math.max(data.dungeonBoxStart.getX(), data.dungeonBoxEnd.getX()),
+                    Math.max(data.dungeonBoxStart.getY(), data.dungeonBoxEnd.getY()),
+                    Math.max(data.dungeonBoxStart.getZ(), data.dungeonBoxEnd.getZ())
+            );
+        } else {
+            dungeonBox = template.getBoundingBox(settings, origin);
         }
 
-        BoundingBox dungeonBox = new BoundingBox(
-                Math.min(data.dungeonBoxStart.getX(), data.dungeonBoxEnd.getX()),
-                Math.min(data.dungeonBoxStart.getY(), data.dungeonBoxEnd.getY()),
-                Math.min(data.dungeonBoxStart.getZ(), data.dungeonBoxEnd.getZ()),
-                Math.max(data.dungeonBoxStart.getX(), data.dungeonBoxEnd.getX()),
-                Math.max(data.dungeonBoxStart.getY(), data.dungeonBoxEnd.getY()),
-                Math.max(data.dungeonBoxStart.getZ(), data.dungeonBoxEnd.getZ())
-        );
-
         ActiveDungeon dungeon = new ActiveDungeon(dungeonBox, actualKillsRequired);
+        if (data.eldritchChestLootTable != null) {
+            dungeon.setEldritchChestLootTable(data.eldritchChestLootTable);
+        }
+
+        if (jsonDefOpt.isPresent()) {
+            DungeonJsonDefinition jsonDef = jsonDefOpt.get();
+            dungeon.setRepeatable(jsonDef.repeatable());
+            jsonDef.timings().ifPresent(t -> dungeon.setTimings(
+                    t.waitingSeconds(),
+                    t.preparingSeconds(),
+                    t.completionSeconds(),
+                    t.betweenWavesMinSeconds(),
+                    t.betweenWavesMaxSeconds()
+            ));
+        }
 
         if (data.waitingSpawnPos != null) {
             dungeon.setWaitingSpawnPos(data.waitingSpawnPos);
@@ -116,11 +140,17 @@ public class DungeonTemplateLoader {
 
         if (data.waitingGatePos != null) {
             dungeon.setWaitingGatePos(data.waitingGatePos);
+            if (data.waitingGateWidth > 0 && data.waitingGateHeight > 0) {
+                DungeonGateHelper.setGateSize(level, data.waitingGatePos, data.waitingGateWidth, data.waitingGateHeight);
+            }
             DungeonGateHelper.unlockGate(level, data.waitingGatePos, DungeonGateHelper.GateType.WAITING);
         }
 
         if (data.dungeonGatePos != null) {
             dungeon.setDungeonGatePos(data.dungeonGatePos);
+            if (data.dungeonGateWidth > 0 && data.dungeonGateHeight > 0) {
+                DungeonGateHelper.setGateSize(level, data.dungeonGatePos, data.dungeonGateWidth, data.dungeonGateHeight);
+            }
             DungeonGateHelper.lockGate(level, data.dungeonGatePos, DungeonGateHelper.GateType.DUNGEON);
         }
 
@@ -169,6 +199,10 @@ public class DungeonTemplateLoader {
                     waves
             );
 
+            if (roomData.rewardGatePos != null && roomData.rewardGateWidth > 0 && roomData.rewardGateHeight > 0) {
+                DungeonGateHelper.setGateSize(level, roomData.rewardGatePos, roomData.rewardGateWidth, roomData.rewardGateHeight);
+            }
+
             if (roomData.heroChestLootTable != null) {
                 room.setRewardLootTable(roomData.heroChestLootTable);
             }
@@ -183,12 +217,31 @@ public class DungeonTemplateLoader {
         DungeonState state = DungeonState.get(level);
         state.addDungeon(dungeon);
         state.setDirty();
+        return dungeon;
     }
 
     /**
-     * Aplikuje samą konfigurację fal i mobów z pliku JSON do już istniejącego w świecie ActiveDungeon.
+     * Aplikuje konfigurację z pliku JSON (fale, moby, loot table, czasy, powtarzalność i rozmiary bram)
+     * do już istniejącego w świecie ActiveDungeon.
      */
-    public static void applyJsonToActiveDungeon(ActiveDungeon dungeon, DungeonJsonDefinition jsonDef) {
+    public static void applyJsonToActiveDungeon(ServerLevel level, ActiveDungeon dungeon, DungeonJsonDefinition jsonDef) {
+        dungeon.setRepeatable(jsonDef.repeatable());
+        jsonDef.timings().ifPresent(t -> dungeon.setTimings(
+                t.waitingSeconds(),
+                t.preparingSeconds(),
+                t.completionSeconds(),
+                t.betweenWavesMinSeconds(),
+                t.betweenWavesMaxSeconds()
+        ));
+        jsonDef.eldritchChestLootTable().ifPresent(dungeon::setEldritchChestLootTable);
+
+        if (level != null) {
+            jsonDef.waitingGateSize().ifPresent(sz ->
+                    DungeonGateHelper.setGateSize(level, dungeon.getWaitingGatePos(), sz.width(), sz.height()));
+            jsonDef.dungeonGateSize().ifPresent(sz ->
+                    DungeonGateHelper.setGateSize(level, dungeon.getDungeonGatePos(), sz.width(), sz.height()));
+        }
+
         List<RoomEncounter> rooms = dungeon.getRooms();
         for (Map.Entry<String, DungeonJsonDefinition.RoomJsonConfig> entry : jsonDef.rooms().entrySet()) {
             try {
@@ -202,6 +255,10 @@ public class DungeonTemplateLoader {
                         room.getWaves().addAll(cfg.waves());
                     }
                     cfg.rewardLootTable().ifPresent(room::setRewardLootTable);
+                    if (level != null) {
+                        cfg.rewardGateSize().ifPresent(sz ->
+                                DungeonGateHelper.setGateSize(level, room.getRewardGatePos(), sz.width(), sz.height()));
+                    }
                 }
             } catch (NumberFormatException ignored) {}
         }
@@ -215,10 +272,20 @@ public class DungeonTemplateLoader {
 
         if (meta.equals("waiting_spawn") || meta.equals("waitingspawn")) {
             data.waitingSpawnPos = pos;
-        } else if (meta.equals("waiting_gate") || meta.equals("waitinggate")) {
+        } else if (meta.startsWith("waiting_gate") || meta.startsWith("waitinggate")) {
             data.waitingGatePos = pos;
-        } else if (meta.equals("dungeon_gate") || meta.equals("dungeongate")) {
+            int[] size = parseGateSizeSuffix(meta);
+            if (size != null) {
+                data.waitingGateWidth = size[0];
+                data.waitingGateHeight = size[1];
+            }
+        } else if (meta.startsWith("dungeon_gate") || meta.startsWith("dungeongate")) {
             data.dungeonGatePos = pos;
+            int[] size = parseGateSizeSuffix(meta);
+            if (size != null) {
+                data.dungeonGateWidth = size[0];
+                data.dungeonGateHeight = size[1];
+            }
         } else if (meta.equals("dungeon_box_start")) {
             data.dungeonBoxStart = pos;
         } else if (meta.equals("dungeon_box_end")) {
@@ -235,8 +302,13 @@ public class DungeonTemplateLoader {
                 DungeonTemplateData.RoomData room = data.getOrCreateRoom(roomId);
                 String action = parts[2];
 
-                if (action.equals("gate")) {
+                if (action.startsWith("gate")) {
                     room.rewardGatePos = pos;
+                    int[] size = parseGateSizeSuffix(meta);
+                    if (size != null) {
+                        room.rewardGateWidth = size[0];
+                        room.rewardGateHeight = size[1];
+                    }
                 } else if (action.equals("hero") || action.equals("chest")) {
                     room.heroChestPos = pos;
                     if (meta.contains(":")) {
@@ -266,5 +338,21 @@ public class DungeonTemplateLoader {
                 }
             } catch (NumberFormatException ignored) {}
         }
+    }
+
+    private static int[] parseGateSizeSuffix(String meta) {
+        int colonIdx = meta.indexOf(':');
+        if (colonIdx < 0) return null;
+        String sizePart = meta.substring(colonIdx + 1).trim().toLowerCase();
+        String[] dims = sizePart.split("x");
+        if (dims.length != 2) return null;
+        try {
+            int w = Integer.parseInt(dims[0].trim());
+            int h = Integer.parseInt(dims[1].trim());
+            if (w > 0 && h > 0) {
+                return new int[]{w, h};
+            }
+        } catch (NumberFormatException ignored) {}
+        return null;
     }
 }

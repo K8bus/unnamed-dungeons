@@ -16,6 +16,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import java.nio.file.Path;
@@ -99,11 +100,11 @@ public class DungeonCreateCommand {
     public static int loadTemplate(CommandContext<CommandSourceStack> ctx, String templateIdStr, int kills, String rotationStr) {
         try {
             ServerPlayer player = ctx.getSource().getPlayerOrException();
-            ServerLevel level = (ServerLevel) player.level();
+            ServerLevel level = player.level();
             BlockPos pos = player.blockPosition();
 
             Identifier templateId = Identifier.parse(templateIdStr);
-            net.minecraft.world.level.block.Rotation rotation = parseRotation(rotationStr);
+            Rotation rotation = parseRotation(rotationStr);
 
             DungeonTemplateLoader.loadDungeon(level, pos, templateId, kills, rotation);
 
@@ -133,7 +134,7 @@ public class DungeonCreateCommand {
                     ? Identifier.parse(idStr)
                     : Identifier.fromNamespaceAndPath("unnamed-dungeons", idStr);
 
-            Path exportedFile = DungeonJsonManager.exportDungeonToJson(level.getServer(), dungeon, id, Optional.of(id));
+            Path exportedFile = DungeonJsonManager.exportDungeonToJson(level.getServer(), level, dungeon, id, Optional.of(id));
 
             ctx.getSource().sendSuccess(() -> Component.literal(
                     "Wyeksportowano definicję JSON dungeonu do: " + exportedFile
@@ -166,11 +167,11 @@ public class DungeonCreateCommand {
                 return 0;
             }
 
-            DungeonTemplateLoader.applyJsonToActiveDungeon(dungeon, defOpt.get());
+            DungeonTemplateLoader.applyJsonToActiveDungeon(level, dungeon, defOpt.get());
             DungeonState.get(level).setDirty();
 
             ctx.getSource().sendSuccess(() -> Component.literal(
-                    "Pomyślnie zaaplikowano konfigurację fal i mobów z JSON: " + id
+                    "Pomyślnie zaaplikowano konfigurację fal, czasów i bram z JSON: " + id
             ), false);
             return 1;
         } catch (Exception e) {
@@ -179,13 +180,13 @@ public class DungeonCreateCommand {
         }
     }
 
-    private static net.minecraft.world.level.block.Rotation parseRotation(String rot) {
-        if (rot == null) return net.minecraft.world.level.block.Rotation.NONE;
+    private static Rotation parseRotation(String rot) {
+        if (rot == null) return Rotation.NONE;
         return switch (rot.toLowerCase()) {
-            case "90", "clockwise_90", "cw_90" -> net.minecraft.world.level.block.Rotation.CLOCKWISE_90;
-            case "180", "clockwise_180", "180_deg" -> net.minecraft.world.level.block.Rotation.CLOCKWISE_180;
-            case "270", "counterclockwise_90", "ccw_90" -> net.minecraft.world.level.block.Rotation.COUNTERCLOCKWISE_90;
-            default -> net.minecraft.world.level.block.Rotation.NONE;
+            case "90", "clockwise_90", "cw_90" -> Rotation.CLOCKWISE_90;
+            case "180", "clockwise_180", "180_deg" -> Rotation.CLOCKWISE_180;
+            case "270", "counterclockwise_90", "ccw_90" -> Rotation.COUNTERCLOCKWISE_90;
+            default -> Rotation.NONE;
         };
     }
 
@@ -194,18 +195,14 @@ public class DungeonCreateCommand {
             ServerLevel level = ctx.getSource().getLevel();
             DungeonState state = DungeonState.get(level);
 
-            // Fizycznie usuwamy bariery ze świata dla KAŻDEGO dungeona
             for (ActiveDungeon dungeon : state.getActiveDungeons()) {
-                // Czyścimy główny obszar dungeonu
                 DungeonPhaseHandler.removeBarriers(level, dungeon.getBoundingBox());
 
-                // Czyścimy bariery z każdego pojedynczego pokoju (roomu), jeśli tam były generowane
                 for (RoomEncounter room : dungeon.getRooms()) {
                     DungeonPhaseHandler.removeBarriers(level, room.getRoomBox());
                 }
             }
 
-            // świat jest czysty, możemy bezpiecznie usunąć dungeony z pamięci
             state.getActiveDungeons().clear();
             state.setDirty();
 

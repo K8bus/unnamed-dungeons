@@ -73,8 +73,6 @@ public class RoomEncounter {
 
     private final Set<UUID> activeMobIds = new HashSet<>();
 
-    private static final int[] BETWEEN_WAVES_SECONDS_BOUNDS = new int[]{BETWEEN_WAVES_MIN_SECONDS, BETWEEN_WAVES_MAX_SECONDS};
-
     public void tickBetweenWavesTimer() { if (betweenWavesTimer > 0) betweenWavesTimer--; }
     public boolean isBetweenWavesTimerFinished() { return betweenWavesTimer <= 0; }
     public int getBetweenWavesTimer() { return betweenWavesTimer; }
@@ -213,7 +211,7 @@ public class RoomEncounter {
         }
 
         if (spawnedInCurrentWave <= 0) {
-            completeCurrentWave();
+            completeCurrentWave(BETWEEN_WAVES_MIN_SECONDS, BETWEEN_WAVES_MAX_SECONDS);
         } else {
             phase = RoomPhase.WAVE_ACTIVE;
         }
@@ -276,26 +274,29 @@ public class RoomEncounter {
     }
 
     public boolean tryCompleteWaveAfterAllMobsGone() {
+        return tryCompleteWaveAfterAllMobsGone(BETWEEN_WAVES_MIN_SECONDS, BETWEEN_WAVES_MAX_SECONDS);
+    }
+
+    public boolean tryCompleteWaveAfterAllMobsGone(int betweenMinSeconds, int betweenMaxSeconds) {
         if (!isCurrentWaveFinishedByMobUuids()) {
             return false;
         }
 
         // advance fazy: WAVE_ACTIVE -> (REWARD albo BETWEEN_WAVES)
-        completeCurrentWave();
+        completeCurrentWave(betweenMinSeconds, betweenMaxSeconds);
         return true;
     }
 
-    // NOTE: completeCurrentWave zostaje private (tick handler wywołuje tryComplete...)
-    private void completeCurrentWave() {
+    private void completeCurrentWave(int betweenMinSeconds, int betweenMaxSeconds) {
         currentWaveIndex++;
         if (currentWaveIndex >= waves.size()) {
             phase = RoomPhase.REWARD;
         } else {
             phase = RoomPhase.BETWEEN_WAVES;
-            int min = BETWEEN_WAVES_SECONDS_BOUNDS[0];
-            int max = BETWEEN_WAVES_SECONDS_BOUNDS[1];
+            int min = Math.max(0, betweenMinSeconds);
+            int max = Math.max(min, betweenMaxSeconds);
             int betweenSeconds = min + (int) (Math.random() * (max - min + 1));
-            betweenWavesTimer = betweenSeconds * 20;
+            betweenWavesTimer = Math.max(0, betweenSeconds);
         }
     }
 

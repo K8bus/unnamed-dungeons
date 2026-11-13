@@ -3,6 +3,7 @@ package com.k8bus.command;
 import com.k8bus.command.dungeon.DungeonCreateCommand;
 import com.k8bus.command.dungeon.DungeonSetupCommand;
 import com.k8bus.command.dungeon.DungeonStateCommand;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -43,6 +44,20 @@ public class DungeonCommand {
                     .then(Commands.literal("setroomgate")
                             .then(Commands.argument("index", IntegerArgumentType.integer(0))
                                     .executes(ctx -> DungeonSetupCommand.setRoomGate(ctx, IntegerArgumentType.getInteger(ctx, "index")))))
+
+                    // /dungeon setgatesize <width> <height> — ustawia rozmiar barier dla bramy, na którą patrzy gracz
+                    .then(Commands.literal("setgatesize")
+                            .then(Commands.argument("width", IntegerArgumentType.integer(1, 32))
+                                    .then(Commands.argument("height", IntegerArgumentType.integer(1, 32))
+                                            .executes(ctx -> DungeonSetupCommand.setGateSize(ctx,
+                                                    IntegerArgumentType.getInteger(ctx, "width"),
+                                                    IntegerArgumentType.getInteger(ctx, "height"))))))
+
+                    // /dungeon setrepeatable <true|false> — włącza lub wyłącza tryb powtarzalny dungeonu
+                    .then(Commands.literal("setrepeatable")
+                            .then(Commands.argument("repeatable", BoolArgumentType.bool())
+                                    .executes(ctx -> DungeonSetupCommand.setRepeatable(ctx,
+                                            BoolArgumentType.getBool(ctx, "repeatable")))))
 
                     // /dungeon setherochest <index> — ustawia hero chest na punkt, na który patrzy gracz
                     .then(Commands.literal("setherochest")
