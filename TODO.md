@@ -9,8 +9,8 @@
 - [x] Expanded `DungeonEvents` (`CAN_ENTER_DUNGEON`, `DUNGEON_PHASE_CHANGE`, `WAVE_COMPLETE`, `CHEST_OPENED`).
 - [x] Full area protection (breaking, block placement, bucket fluid placement, explosions) and chest/block restoration on `reset`, `resign`, and `repeatable` completion.
 - [x] Fixed premature room/wave startup (rooms now start strictly during `ACTIVE` phase via `DungeonRoomHandler`).
+- [x] Live in-game verification with structures converted from external mods.
 
-## Before Release / Future Work
-- [ ] Live in-game playtest (full run `WAITING` -> `PREPARING` -> `ACTIVE` -> `COMPLETED` / `repeatable`, `/dungeon reset`, `/dungeon resign`, non-OP block/bucket protection).
-- [ ] Final 3D models/textures for `dungeon_gate` (`dungeon_gate.json` / `dungeon_gate_open.json`) and optional custom HUD icons.
-- [ ] Optional split of `DungeonsVfx` into a standalone library mod.
+## Future Work
+- [ ] **DungeonsVfx (ULTRA WIP):** Rework and split `com.k8bus.vfx.*` out into a separate standalone VFX library mod.
+- [ ] Placeholder/final blockstate & item models for `wooden_dungeon_chest`, `hero_chest`, `eldritch_chest` and `dungeon_gate` item/block variants, plus optional custom HUD icons.

@@ -10,6 +10,13 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
+/**
+ * Tymczasowe API efektów wizualnych (VFX) dla Unnamed Dungeons.
+ *
+ * @apiNote <b>ULTRA WIP / EXPERIMENTAL:</b> Ten moduł jest w bardzo wczesnej fazie prac i docelowo
+ * zostanie wydzielony do osobnego moda. Sygnatury metod, zachowanie i zasoby mogą ulec zmianie
+ * lub zostać usunięte bez zachowania wstecznej kompatybilności.
+ */
 public final class DungeonsVfx {
 
     private DungeonsVfx() {}

@@ -1,6 +1,6 @@
 # Unnamed Dungeons Engine & API
 
-A data-driven **Instanced Dungeon Engine** (**NBT + JSON**), **3D Flood-Fill Room Detector**, **NBT Structure Compiler**, and **Combat VFX Library** for **Fabric** (Minecraft `26.2`, Java `25`).
+A data-driven **Instanced Dungeon Engine** (**NBT + JSON**), **3D Flood-Fill Room Detector**, **NBT Structure Compiler**, and an experimental **(ULTRA WIP) Combat VFX Library** for **Fabric** (Minecraft `26.2`, Java `25`).
 
 Instead of relying on static vanilla spawners, **Unnamed Dungeons** provides a full RPG/MMORPG-style dungeon state machine: waiting lobbies, ready-up countdowns, player-scaled combat waves, full area protection (breaking, block placement, fluid placement, explosions), chest restoration on reset, repeatable dungeon runs, tag-based gates with configurable barrier dimensions, anti-stuck mob highlighting, and a clean Java API + Fabric Events for modders, datapack authors, and mapmakers.
 
@@ -17,7 +17,7 @@ Instead of relying on static vanilla spawners, **Unnamed Dungeons** provides a f
 8. [Java API for Mod Developers](#java-api-for-mod-developers)
    - [DungeonApi – Instance Management](#1-dungeonapi--instance-management)
    - [DungeonEvents – Fabric Callbacks & Hooks](#2-dungeonevents--fabric-callbacks--hooks)
-   - [DungeonsVfx – Visual Effects API](#3-dungeonsvfx--visual-effects-api)
+   - [DungeonsVfx – Visual Effects API (ULTRA WIP)](#3-dungeonsvfx--visual-effects-api-ultra-wip)
 9. [License](#license)
 
 ---
@@ -252,7 +252,7 @@ When saving a structure to `.nbt`, place **Structure Blocks in `DATA` mode** wit
 
 ## Java API for Mod Developers
 
-Main API entry points live in `com.k8bus.api` and `com.k8bus.vfx`.
+Main API entry points live in `com.k8bus.api` (and experimental VFX in `com.k8bus.vfx`).
 
 ### 1. `DungeonApi` – Instance Management
 
@@ -298,8 +298,6 @@ Register listeners during mod initialization (`onInitialize()`):
 
 ```java
 import com.k8bus.api.DungeonEvents;
-import com.k8bus.vfx.DungeonsVfx;
-import com.k8bus.vfx.VfxTheme;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.monster.Monster;
 
@@ -307,19 +305,16 @@ public void registerDungeonHooks() {
     // Control who can enter a dungeon (e.g. key check, party limit, level requirement):
     DungeonEvents.CAN_ENTER_DUNGEON.register((level, dungeon, player) -> !player.isSleeping());
 
-    // Customize spawned wave mobs (gear, stats, bossbars, VFX):
+    // Customize spawned wave mobs (gear, stats, bossbars):
     DungeonEvents.MOB_SPAWNED.register((level, room, waveIndex, entity) -> {
         if (waveIndex >= 2 && entity instanceof Monster monster) {
             monster.setCustomName(Component.literal("§4Elite Guardian"));
-            DungeonsVfx.aura(level, monster, VfxTheme.SOUL, 200);
         }
     });
 
     // React when a room is cleared:
     DungeonEvents.ROOM_CLEAR.register((level, dungeon, room) -> {
-        if (!room.getHeroChestPos().equals(net.minecraft.core.BlockPos.ZERO)) {
-            DungeonsVfx.groundRing(level, room.getHeroChestPos().getCenter(), 3.5f, VfxTheme.RADIANCE);
-        }
+        // Custom effects, sounds, advancement triggers, etc.
     });
 
     // Override chest loot (return false to cancel the engine's built-in / loot-table drops):
@@ -340,9 +335,12 @@ Available events in [`DungeonEvents`](src/main/java/com/k8bus/api/DungeonEvents.
 * `DungeonEvents.ROOM_CLEAR` – `(level, dungeon, room)`
 * `DungeonEvents.CHEST_OPENED` – `(level, dungeon, pos, player, chestState)` → `boolean`
 
-### 3. `DungeonsVfx` – Visual Effects API
+### 3. `DungeonsVfx` – Visual Effects API (ULTRA WIP)
 
-Static helper sending optimized VFX packets to tracking players (`PlayerLookup.tracking`). Available themes in [`VfxTheme`](src/main/java/com/k8bus/vfx/VfxTheme.java): `FIRE`, `FROST`, `LIGHTNING`, `POISON`, `VOID`, `RADIANCE`, `SOUL`, `DEFLECT`, `VINES`, `WEBBING`:
+> [!WARNING]
+> **ULTRA WIP / EXPERIMENTAL:** `DungeonsVfx` (`com.k8bus.vfx.*`) is currently **heavy work-in-progress** and **will be extracted into a separate standalone mod** in the future. Method signatures, payload formats, visuals, and models may break or be removed from this mod without backwards compatibility. Rely on `com.k8bus.api.*` (`DungeonApi` / `DungeonEvents`) for production integrations.
+
+Static helper sending VFX packets to tracking players (`PlayerLookup.tracking`). Available themes in [`VfxTheme`](src/main/java/com/k8bus/vfx/VfxTheme.java): `FIRE`, `FROST`, `LIGHTNING`, `POISON`, `VOID`, `RADIANCE`, `SOUL`, `DEFLECT`, `VINES`, `WEBBING`:
 
 ```java
 import com.k8bus.vfx.DungeonsVfx;
