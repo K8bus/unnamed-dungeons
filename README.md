@@ -1,88 +1,177 @@
 # Unnamed Dungeons Engine & API
 
-Silnik instancyjnych dungeonów (**NBT + JSON Data-Driven**), automatyczny detektor pokoi 3D (Flood-Fill), kompilator struktur `.nbt` oraz biblioteka efektów wizualnych (VFX) dla **Fabric**.
+A data-driven **Instanced Dungeon Engine** (**NBT + JSON**), **3D Flood-Fill Room Detector**, **NBT Structure Compiler**, and **Combat VFX Library** for **Fabric** (Minecraft `26.2`, Java `25`).
 
-Zamiast tradycyjnych struktur ze spawnerami, **Unnamed Dungeons** dostarcza pełną maszynę stanów w stylu gier RPG / MMORPG: poczekalnie, odliczanie, skalowanie fal pod liczbę graczy, ochronę terenu (niszczenie, stawianie bloków i płynów, eksplozje), przywracanie skrzyń przy resecie, powtarzalny tryb dungeonu (`repeatable`), konfigurowalne rozmiary bram (`#unnamed-dungeons:dungeon_gates`), system anti-stuck podświetlający ostatnie moby oraz pełne API dla twórców modów i datapacków.
-
----
-
-## Spis treści
-1. [Główne funkcje silnika](#główne-funkcje-silnika)
-2. [System bram i własne modele (`#unnamed-dungeons:dungeon_gates`)](#system-bram-i-własne-modele-unnamed-dungeonsdungeon_gates)
-3. [Komendy w grze (In-Game Builder)](#komendy-w-grze-in-game-builder)
-4. [System JSON Data-Driven (Datapacki i Eksport)](#system-json-data-driven-datapacki-i-eksport)
-5. [Kompilator struktur NBT (Structure Block Metadata)](#kompilator-struktur-nbt-structure-block-metadata)
-6. [Java API dla deweloperów](#java-api-dla-deweloperów)
-   - [DungeonApi – zarządzanie instancjami](#1-dungeonapi--zarządzanie-instancjami)
-   - [DungeonEvents – hooki i callbacki Fabric](#2-dungeonevents--hooki-i-callbacki-fabric)
-   - [DungeonsVfx – biblioteka efektów wizualnych](#3-dungeonsvfx--biblioteka-efektów-wizualnych)
-7. [Licencja](#licencja)
+Instead of relying on static vanilla spawners, **Unnamed Dungeons** provides a full RPG/MMORPG-style dungeon state machine: waiting lobbies, ready-up countdowns, player-scaled combat waves, full area protection (breaking, block placement, fluid placement, explosions), chest restoration on reset, repeatable dungeon runs, tag-based gates with configurable barrier dimensions, anti-stuck mob highlighting, and a clean Java API + Fabric Events for modders, datapack authors, and mapmakers.
 
 ---
 
-## Główne funkcje silnika
-
-* **Maszyna stanów instancji (`ActiveDungeon`):**
-  `IDLE` → `WAITING` (poczekalnia i odliczanie) → `PREPARING` (snapshot liczby graczy, zamknięcie bramy poczekalni) → `ACTIVE` (otwarcie bramy głównej, walka w pokojach) → `COMPLETED` / `RESETTING`.
-* **Tryb powtarzalny (`repeatable`) i indywidualne czasy (`timings`):**
-  Każdy dungeon może posiadać własne czasy (`waiting_seconds`, `preparing_seconds`, `completion_seconds`, `between_waves_min_seconds`, `between_waves_max_seconds`) oraz flagę `repeatable` (po ukończeniu bramy, moby i otwarte/zniszczone skrzynie wracają do stanu początkowego zamiast usuwać instancję).
-* **Hybrydowy system NBT + JSON Data-Driven:**
-  Geometria i pozycje bram pochodzą ze struktury `.nbt` (lub detektora Flood-Fill w grze), natomiast konfiguracja fal, przeliczników graczy, puli mobów, czasów, rozmiarów bram oraz tablic łupów (`LootTable`) jest ładowana z plików `.json` w datapackach (`data/<namespace>/dungeons/*.json`). Skonfigurowany w grze dungeon można jednym poleceniem wyeksportować do gotowego pliku `.json`.
-* **Automatyczna detekcja pokoi 3D (`RoomSpaceDetector`):**
-  Algorytm BFS 3D automatycznie wykrywa ściany i bramy z tagu `#unnamed-dungeons:dungeon_gates`, wyliczając `BoundingBox` pokoju od pozycji gracza.
-* **Skalowanie fal i customowe pule mobów (`WaveDefinition`):**
-  Każda fala przelicza liczbę mobów według wzoru: `baseCount + (players - 1) * extraPerPlayer`. Możesz przypisać dowolne moby z vanilli lub innych modów (np. `minecraft:blaze`, `my_mod:boss`).
-* **Ochrona instancji i cykl życia gracza:**
-  Automatyczne przełączanie graczy w tryb `ADVENTURE`, zapis i przywracanie spawnpointu, blokada niszczenia, stawiania bloków, rozlewania płynów z wiader oraz eksplozji wewnątrz granic dungeonu (z wyjątkiem trybu Creative i operatorów `GAMEMASTERS`), przywracanie skrzyń przy resecie/rezygnacji oraz synchronizacja HUD-u klienta.
-
----
-
-## System bram i własne modele (`#unnamed-dungeons:dungeon_gates`)
-
-* Silnik rozpoznaje bramy na podstawie tagu bloków `data/unnamed-dungeons/tags/block/dungeon_gates.json` (domyślnie zawiera `unnamed-dungeons:dungeon_gate`), jak również dowolnych podklas `DungeonGateBlock`.
-* Zewnętrzne mody lub datapacki mogą dodać do tego tagu własne bloki bram — silnik automatycznie obsługuje opcjonalne właściwości `facing` (`HORIZONTAL_FACING`) oraz `open` (`OPEN`) i stawia/usuwa niewidzialne bariery wokół bramy.
-* Własne modele 3D / tekstury można podmienić przez resource pack w `assets/unnamed-dungeons/blockstates/dungeon_gate.json` (warianty `facing` + `open=false`/`open=true`) oraz `models/block/dungeon_gate.json` / `dungeon_gate_open.json`.
-* Rozmiar bariery każdej bramy (`width x height`) jest konfigurowalny indywidualnie przez:
-  * konstruktor `DungeonGateBlock(properties, width, height)`,
-  * blok-encja `DungeonGateBlockEntity` / komendę `/dungeon setgatesize <width> <height>`,
-  * tag metadanych w `.nbt` (np. `waiting_gate:5x4`),
-  * definicję JSON (`waiting_gate_size`, `dungeon_gate_size`, `reward_gate_size`),
-  * metodę API `DungeonApi.setGateBarrierSize(...)`.
+## Table of Contents
+1. [Core Engine Features](#core-engine-features)
+2. [How Dungeon Lifecycle Works](#how-dungeon-lifecycle-works)
+3. [Step-by-Step Guide: Building & Running a Dungeon In-Game](#step-by-step-guide-building--running-a-dungeon-in-game)
+4. [Command Reference](#command-reference)
+5. [Gates, Custom Blocks & Resource Packs (`#unnamed-dungeons:dungeon_gates`)](#gates-custom-blocks--resource-packs-unnamed-dungeonsdungeon_gates)
+6. [JSON Data-Driven System (Datapacks & Export)](#json-data-driven-system-datapacks--export)
+7. [NBT Structure Compiler (Structure Block Metadata)](#nbt-structure-compiler-structure-block-metadata)
+8. [Java API for Mod Developers](#java-api-for-mod-developers)
+   - [DungeonApi – Instance Management](#1-dungeonapi--instance-management)
+   - [DungeonEvents – Fabric Callbacks & Hooks](#2-dungeonevents--fabric-callbacks--hooks)
+   - [DungeonsVfx – Visual Effects API](#3-dungeonsvfx--visual-effects-api)
+9. [License](#license)
 
 ---
 
-## Komendy w grze (In-Game Builder)
+## Core Engine Features
 
-Wymagane uprawnienia: poziom `GAMEMASTERS` (OP).
+* **Instance State Machine (`ActiveDungeon`):**
+  `IDLE` → `WAITING` (lobby countdown + ready-up) → `PREPARING` (player count snapshot, waiting gate locks) → `ACTIVE` (main dungeon gate opens, room waves trigger on entry) → `COMPLETED` / `RESETTING`.
+* **Repeatable Runs & Per-Dungeon Timings:**
+  Every dungeon instance has its own configurable `repeatable` flag and `timings` (`waiting_seconds`, `preparing_seconds`, `completion_seconds`, `between_waves_min_seconds`, `between_waves_max_seconds`) — no global mod config overrides individual dungeons.
+* **Hybrid NBT + JSON Data-Driven Architecture:**
+  Dungeon geometry, boxes, gates, and spawn markers can come from `.nbt` structures or in-game Flood-Fill scanning, while wave counts, player scaling, custom mob pools, loot tables, timings, and gate barrier sizes can be configured in `.json` files (`data/<namespace>/dungeons/*.json`). Any dungeon built in-game can be exported straight to JSON.
+* **Automatic 3D Flood-Fill Room Detection (`RoomSpaceDetector`):**
+  Stand inside an enclosed room and run `/dungeon addroom` — a 3D BFS scan automatically detects walls and `#unnamed-dungeons:dungeon_gates` gates to compute the exact room `BoundingBox`.
+* **Player-Scaled Waves & Custom Mob Pools (`WaveDefinition`):**
+  Each wave scales its mob count using: `baseCount + (players - 1) * extraPerPlayer`. Assign any vanilla or modded entity IDs (e.g., `minecraft:blaze`, `my_mod:boss`).
+* **Anti-Stuck Tracking & Protection:**
+  When `<= 2` mobs remain in a room wave, they automatically receive `GLOWING`. Inside dungeon bounds, Survival/Adventure players cannot break blocks, place blocks, pour buckets, or blow up terrain with explosions (Creative builders and `GAMEMASTERS` operators bypass block/bucket protection).
+* **Loot & Chest Restoration:**
+  Built-in crates/chests (`wooden_dungeon_chest`, `hero_chest`, `eldritch_chest`) support vanilla/custom `LootTable`s and are automatically restored to their original state when a dungeon resets, resigns, or finishes in `repeatable` mode.
 
-| Komenda | Opis |
+---
+
+## How Dungeon Lifecycle Works
+
+1. **`IDLE` (Ready for players):**
+   * Players in **Creative** or **Spectator** mode are treated as builders and do not trigger the dungeon.
+   * When a **Survival** (or Adventure) player steps inside the dungeon `BoundingBox`, `DungeonEvents.CAN_ENTER_DUNGEON` is checked.
+   * Allowed players are saved (original game mode & spawnpoint), switched to **Adventure** mode, and have their temporary respawn point set near the lobby. The dungeon moves to `WAITING`.
+2. **`WAITING` (Lobby countdown):**
+   * Counts down `waiting_seconds` (default `30s`) and syncs the timer to the client HUD.
+   * **Ready-Up:** Right-clicking a dungeon gate during `WAITING` shortens the remaining timer to `3` seconds (if more than 3s remain).
+   * If all players leave during `WAITING`, the dungeon returns to `IDLE`.
+3. **`PREPARING` (Lock-in):**
+   * Snapshots the current player count (`playerSnapshotCount`) for wave scaling.
+   * Locks `waitingGate` (closes gate + places invisible `BARRIER` blocks) and counts down `preparing_seconds` (default `10s`).
+4. **`ACTIVE` (Combat):**
+   * Unlocks `dungeonGate` so players can enter the dungeon rooms.
+   * Rooms remain `IDLE` until a dungeon player physically enters a room's `roomBox`.
+   * Entering an `IDLE` room locks its `rewardGatePos` and spawns Wave 1. Clearing all mobs starts a between-waves countdown (`between_waves_min_seconds`..`between_waves_max_seconds`).
+   * Clearing all waves unlocks `rewardGatePos` and spawns `HeroChest` at `heroChestPos` (if configured).
+5. **`COMPLETED` / `RESETTING`:**
+   * Opening `EldritchChest` starts the evacuation countdown (`completion_seconds`, default `15s`).
+   * **If `repeatable == false`:** players are restored & teleported to `waitingSpawnPos`, barriers/mobs are cleared, waiting & dungeon gates are removed, and the dungeon instance is removed from `DungeonState`.
+   * **If `repeatable == true`:** players are restored & teleported to `waitingSpawnPos`, all opened/spawned chests & tracked blocks are restored, mobs and barriers are cleared, `waitingGate` is unlocked, `dungeonGate` and room `rewardGate`s are locked, and the dungeon returns to `RESETTING` (until players exit the bounds) / `IDLE`.
+
+---
+
+## Step-by-Step Guide: Building & Running a Dungeon In-Game
+
+All builder commands require `GAMEMASTERS` (OP) permissions.
+
+### 1. Build the layout (in Creative mode)
+* Build an entrance/waiting lobby and at least one **fully enclosed** combat room (floor, walls, ceiling — no gaps to the outside so 3D Flood-Fill can detect the room walls).
+* Place `unnamed-dungeons:dungeon_gate` blocks in your doorways:
+  1. **Waiting Gate** (entrance to the waiting lobby)
+  2. **Dungeon Gate** (between the waiting lobby and the dungeon)
+  3. **Room Reward Gate(s)** (exit of each combat room)
+* Optionally place `unnamed-dungeons:wooden_dungeon_chest` crates around the dungeon and an `unnamed-dungeons:eldritch_chest` in the final treasure room.
+
+### 2. Register and configure the dungeon
+1. Stand near the center of your dungeon build and create the outer bounding box:
+   ```mcfunction
+   /dungeon setbox 30 30
+   ```
+   *(Creates a box with radius `30` around you and sets fallback kill goal `30` if no rooms are added.)*
+2. Stand inside the waiting lobby and set the spawn/teleport point:
+   ```mcfunction
+   /dungeon setwaitingspawn
+   ```
+3. Look directly at the waiting lobby gate and bind it:
+   ```mcfunction
+   /dungeon setwaitinggate
+   ```
+4. Look directly at the main dungeon entrance gate and bind it:
+   ```mcfunction
+   /dungeon setdungeongate
+   ```
+5. *(Optional)* Make the dungeon replayable and resize any gate's barrier area (e.g. 5 wide × 4 tall):
+   ```mcfunction
+   /dungeon setrepeatable true
+   /dungeon setgatesize 5 4
+   ```
+6. Stand inside your first enclosed room and add it with 3 wave base mob counts:
+   ```mcfunction
+   /dungeon addroom 5 8 12
+   ```
+   * Room indices start at `0`. Look at the room's exit gate, an empty floor spot for the reward chest, and customize its mob pool:
+   ```mcfunction
+   /dungeon setroomgate 0
+   /dungeon setherochest 0
+   /dungeon setroommobs 0 "minecraft:zombie,minecraft:skeleton,minecraft:blaze"
+   ```
+7. *(Optional)* Export everything (rooms, waves, mob pools, timings, gate sizes, `repeatable`) to JSON so you can tweak timings or loot tables in a text editor and reload them anytime:
+   ```mcfunction
+   /dungeon export "my_crypt"
+   /dungeon applyjson "my_crypt"
+   ```
+
+### 3. Playtest the dungeon
+* Leave the dungeon bounding box and switch to Survival: `/gamemode survival`.
+* Walk into the waiting lobby — you will be switched to Adventure mode and the countdown will begin.
+* Right-click a gate to skip the wait countdown to `3` seconds, fight through the rooms, open the chests, and test `/dungeon resign`, `/dungeon reset`, or `repeatable` completion.
+* Check `/dungeon status` at any time to inspect phase, kill count, and room states.
+
+---
+
+## Command Reference
+
+| Command | Description |
 | :--- | :--- |
-| `/dungeon setbox <size> <killsRequired>` | Tworzy nowy obszar dungeonu wokół gracza o promieniu `<size>`. |
-| `/dungeon setwaitingspawn` | Ustawia punkt spawnu poczekalni w miejscu, w którym stoisz. |
-| `/dungeon setwaitinggate` | Ustawia bramę poczekalni na blok bramy (`#unnamed-dungeons:dungeon_gates`), na który aktualnie patrzysz. |
-| `/dungeon setdungeongate` | Ustawia główną bramę wejściową do dungeonu na blok bramy, na który patrzysz. |
-| `/dungeon addroom <wave1> <wave2> <wave3>` | Automatycznie skanuje pokój (Flood-Fill 3D od pozycji gracza) i dodaje go z 3 falami o podanej bazowej liczbie mobów. |
-| `/dungeon setroomgate <index>` | Przypisuje bramę wyjściową (otwieraną po ukończeniu wszystkich fal) dla pokoju `<index>` (0, 1, 2...) na blok bramy, na który patrzysz. |
-| `/dungeon setgatesize <width> <height>` | Ustawia indywidualny rozmiar bariery (`width x height`) dla bramy, na którą aktualnie patrzysz. |
-| `/dungeon setrepeatable <true\|false>` | Włącza lub wyłącza automatyczny reset dungeonu po jego ukończeniu (`repeatable`). |
-| `/dungeon setherochest <index>` | Ustawia pozycję skrzyni nagrody (`Hero Chest`) dla pokoju `<index>` na blok, na który patrzysz. |
-| `/dungeon setroommobs <index> "<mobsCsv>"` | Ustawia pulę mobów dla pokoju `<index>`, np. `/dungeon setroommobs 0 "minecraft:blaze,minecraft:wither_skeleton"`. |
-| `/dungeon export "<id>"` | Eksportuje pokoje, fale, czasy, powtarzalność i rozmiary bram aktualnego dungeonu do pliku JSON w `<world>/dungeons/<namespace>/<path>.json`. |
-| `/dungeon applyjson "<id>"` | Wczytuje plik JSON (z datapacka lub folderu świata) i nakłada jego konfigurację na aktualny dungeon. |
-| `/dungeon load "<templateOrJsonId>" [kills] [rotation]` | Wczytuje strukturę `.nbt` i automatycznie nakłada na nią definicję `.json` o tym samym ID (`rotation`: `none`, `90`, `180`, `270`). |
-| `/dungeon status` | Wyświetla stan wszystkich aktywnych dungeonów i pokoi na świecie. |
-| `/dungeon reset` / `/dungeon resign` | Resetuje dungeon, w którym stoisz, lub wycofuje z niego drużynę. |
-| `/dungeon forcereset` / `/dungeon clear` | Awaryjnie resetuje lub usuwa wszystkie instancje na świecie. |
+| `/dungeon setbox <size> <killsRequired>` | Creates a dungeon bounding box of radius `<size>` (1–100) around the player. |
+| `/dungeon setwaitingspawn` | Sets the lobby spawn/evacuation position to your current position. |
+| `/dungeon setwaitinggate` | Binds the waiting lobby gate to the `#unnamed-dungeons:dungeon_gates` block you are looking at. |
+| `/dungeon setdungeongate` | Binds the main dungeon entrance gate to the gate block you are looking at. |
+| `/dungeon addroom <wave1> <wave2> <wave3>` | Runs 3D Flood-Fill from your position and adds a room with 3 wave base counts. |
+| `/dungeon setroomgate <index>` | Binds the exit reward gate for room `<index>` (0, 1, 2...) to the gate block you are looking at. |
+| `/dungeon setgatesize <width> <height>` | Sets custom barrier dimensions (`1..32`) on the gate block you are looking at. |
+| `/dungeon setrepeatable <true\|false>` | Enables or disables automatic reset instead of removal on dungeon completion. |
+| `/dungeon setherochest <index>` | Sets the `HeroChest` spawn position for room `<index>` to the block you are looking at. |
+| `/dungeon setroommobs <index> "<mobsCsv>"` | Sets the custom mob pool for room `<index>` (e.g. `"minecraft:blaze,minecraft:wither_skeleton"`). |
+| `/dungeon export "<id>"` | Exports rooms, waves, timings, `repeatable`, and gate sizes to `<world>/dungeons/<namespace>/<path>.json`. |
+| `/dungeon applyjson "<id>"` | Loads a JSON definition (from world folder or datapack) and applies it to the current dungeon. |
+| `/dungeon load "<templateOrJsonId>" [kills] [rotation]` | Spawns an `.nbt` structure at your position and auto-applies matching `.json` (`rotation`: `none`, `90`, `180`, `270`). |
+| `/dungeon status` | Prints status of all active dungeons and rooms in the current dimension. |
+| `/dungeon resign` | Abandons the current run, teleports players to lobby spawn, restores chests, and resets state. |
+| `/dungeon reset` | Resets the dungeon you are standing in back to `IDLE`. |
+| `/dungeon forcereset` / `/dungeon clear` | Emergency-resets all dungeons or removes all active dungeon instances and barriers. |
 
 ---
 
-## System JSON Data-Driven (Datapacki i Eksport)
+## Gates, Custom Blocks & Resource Packs (`#unnamed-dungeons:dungeon_gates`)
 
-Silnik automatycznie szuka definicji JSON w dwóch miejscach:
-1. W folderze świata: `<world>/dungeons/<namespace>/<path>.json` (tam zapisywane są pliki po użyciu `/dungeon export`).
-2. W datapackach / zasobach modów: `data/<namespace>/dungeons/<path>.json`.
+* **Block Tag:** `data/unnamed-dungeons/tags/block/dungeon_gates.json` defines `#unnamed-dungeons:dungeon_gates` (includes `unnamed-dungeons:dungeon_gate` by default).
+* **Custom Gate Blocks from Other Mods / Datapacks:**
+  * Add any block to `#unnamed-dungeons:dungeon_gates` (or extend `DungeonGateBlock`).
+  * If the block exposes `BlockStateProperties.HORIZONTAL_FACING` (`facing`) and/or `BlockStateProperties.OPEN` (`open`), the engine automatically reads `facing` to orient barriers and updates `open=true`/`open=false` on lock/unlock.
+* **Resource Pack Support for `unnamed-dungeons:dungeon_gate`:**
+  * [blockstates/dungeon_gate.json](src/main/resources/assets/unnamed-dungeons/blockstates/dungeon_gate.json) provides all `facing` (`north`, `south`, `east`, `west`) and `open` (`false`, `true`) variants.
+  * Override `assets/unnamed-dungeons/models/block/dungeon_gate.json` (closed) and `assets/unnamed-dungeons/models/block/dungeon_gate_open.json` (open) with your own models and textures.
+* **Barrier Size Resolution Order:**
+  1. Custom `width x height` saved on `DungeonGateBlockEntity` (set via `/dungeon setgatesize`, JSON, NBT metadata, or `DungeonApi.setGateBarrierSize`).
+  2. Default `width x height` passed to the `DungeonGateBlock` constructor.
+  3. Built-in fallback: `2x2` for `ROOM` gates, `3x3` for `WAITING` and `DUNGEON` gates.
 
-### Przykład pliku `data/unnamed-dungeons/dungeons/example_crypt.json`:
+---
+
+## JSON Data-Driven System (Datapacks & Export)
+
+Definitions are resolved in the following priority order:
+1. **World folder override:** `<world>/dungeons/<namespace>/<path>.json` (also where `/dungeon export` writes files).
+2. **Datapack / mod resources:** `data/<namespace>/dungeons/<path>.json`.
+
+### Example `data/unnamed-dungeons/dungeons/example_crypt.json`:
 ```json
 {
   "template": "unnamed-dungeons:example_crypt",
@@ -140,32 +229,32 @@ Silnik automatycznie szuka definicji JSON w dwóch miejscach:
 
 ---
 
-## Kompilator struktur NBT (Structure Block Metadata)
+## NBT Structure Compiler (Structure Block Metadata)
 
-Podczas budowania struktury do eksportu `.nbt`, możesz postawić **Structure Blocki w trybie `DATA`** i wpisać poniższe znaczniki w polu metadanych. Podczas wywołania `/dungeon load` (lub `DungeonApi.spawnFromTemplate`) silnik sam odczyta ich pozycje z uwzględnieniem obrotu (`Rotation`), nałoży konfigurację JSON i zastąpi Structure Blocki powietrzem:
+When saving a structure to `.nbt`, place **Structure Blocks in `DATA` mode** with the metadata tags below. Calling `/dungeon load` (or `DungeonApi.spawnFromTemplate`) automatically parses all positions with rotation applied, applies matching JSON if present, and replaces the Structure Blocks with air.
 
-### Znaczniki globalne dungeonu:
-* `dungeon_box_start` oraz `dungeon_box_end` – rogi całego dungeonu (opcjonalne; brak oznacza użycie wymiarów całego szablonu `.nbt`).
-* `waiting_spawn` – punkt teleportacji w poczekalni.
-* `waiting_gate` lub `waiting_gate:<width>x<height>` – pozycja (i opcjonalny rozmiar bariery) bramy poczekalni.
-* `dungeon_gate` lub `dungeon_gate:<width>x<height>` – pozycja (i opcjonalny rozmiar bariery) głównej bramy wejściowej do lochu.
-* `eldritch_chest` lub `eldritch_chest:<namespace>:<loot_table>` – główna skrzynia końcowa.
+### Global Dungeon Markers
+* `dungeon_box_start` & `dungeon_box_end` – corners of the dungeon bounding box (optional; defaults to the `.nbt` template bounds).
+* `waiting_spawn` – lobby teleport/evacuation position.
+* `waiting_gate` or `waiting_gate:<width>x<height>` – waiting lobby gate position (and optional barrier size).
+* `dungeon_gate` or `dungeon_gate:<width>x<height>` – main dungeon entrance gate position (and optional barrier size).
+* `eldritch_chest` or `eldritch_chest:<namespace>:<loot_table>` – final chest position and optional loot table.
 
-### Znaczniki pokoi (`<id>` to numer pokoju, np. `1`, `2`, `3`):
-* `room_<id>_box_start` oraz `room_<id>_box_end` – rogi pokoju `<id>`.
-* `room_<id>_gate` lub `room_<id>_gate:<width>x<height>` – brama otwierana po oczyszczeniu pokoju `<id>`.
-* `room_<id>_chest` lub `room_<id>_chest:<namespace>:<loot_table>` – pozycja `Hero Chest` po ukończeniu pokoju.
-* `room_<id>_spawn` – dedykowany punkt spawnu mobów w pokoju (można postawić wiele bloków z tym samym tagiem).
-* `room_<id>_waves_<w1>_<w2>_<w3>` – szybka definicja fal bez JSON-a (np. `room_1_waves_6_10_14`).
-* `room_<id>_mobs:<id1>,<id2>` – szybka pula mobów bez JSON-a (np. `room_1_mobs:minecraft:breeze,minecraft:stray`).
+### Room Markers (`<id>` is the 1-based room number, e.g. `1`, `2`, `3`)
+* `room_<id>_box_start` & `room_<id>_box_end` – corners of room `<id>`.
+* `room_<id>_gate` or `room_<id>_gate:<width>x<height>` – reward gate unlocked after clearing room `<id>`.
+* `room_<id>_chest` or `room_<id>_chest:<namespace>:<loot_table>` – `HeroChest` position (and optional loot table).
+* `room_<id>_spawn` – dedicated mob spawn point inside the room (you can place multiple).
+* `room_<id>_waves_<w1>_<w2>_<w3>` – inline wave counts without JSON (e.g. `room_1_waves_6_10_14`).
+* `room_<id>_mobs:<id1>,<id2>` – inline mob pool without JSON (e.g. `room_1_mobs:minecraft:breeze,minecraft:stray`).
 
 ---
 
-## Java API dla deweloperów
+## Java API for Mod Developers
 
-Wszystkie główne klasy API znajdują się w pakietach `com.k8bus.api` oraz `com.k8bus.vfx`.
+Main API entry points live in `com.k8bus.api` and `com.k8bus.vfx`.
 
-### 1. `DungeonApi` – zarządzanie instancjami
+### 1. `DungeonApi` – Instance Management
 
 ```java
 import com.k8bus.api.DungeonApi;
@@ -176,7 +265,7 @@ import net.minecraft.world.level.block.Rotation;
 
 import java.util.List;
 
-// 1. Spawnowanie gotowego dungeonu z szablonu NBT + JSON:
+// 1. Spawn a dungeon from an NBT template + matching JSON definition:
 ActiveDungeon spawned = DungeonApi.spawnFromTemplate(
     serverLevel,
     originPos,
@@ -185,12 +274,12 @@ ActiveDungeon spawned = DungeonApi.spawnFromTemplate(
     Rotation.CLOCKWISE_90
 );
 
-// 2. Konfiguracja powtarzalności, czasów (w sekundach) oraz rozmiaru bramy:
+// 2. Configure repeatability, per-dungeon timings (seconds), and gate barrier size:
 DungeonApi.setRepeatable(serverLevel, spawned, true);
 DungeonApi.configureTimings(serverLevel, spawned, 20, 5, 10, 2, 4);
 DungeonApi.setGateBarrierSize(serverLevel, spawned.getDungeonGatePos(), 5, 4);
 
-// 3. Programowe wykrycie pokoju (Flood-Fill 3D) i dodanie własnych fal:
+// 3. Programmatically detect a room via 3D Flood-Fill and attach waves:
 DungeonApi.getDungeonAt(serverLevel, player.blockPosition()).ifPresent(dungeon -> {
     List<WaveDefinition> waves = List.of(
         new WaveDefinition(5, 2, List.of(Identifier.withDefaultNamespace("husk"))),
@@ -203,41 +292,42 @@ DungeonApi.getDungeonAt(serverLevel, player.blockPosition()).ifPresent(dungeon -
 });
 ```
 
-### 2. `DungeonEvents` – hooki i callbacki Fabric
+### 2. `DungeonEvents` – Fabric Callbacks & Hooks
 
-Możesz zarejestrować własną logikę w `onInitialize()` swojego moda:
+Register listeners during mod initialization (`onInitialize()`):
 
 ```java
 import com.k8bus.api.DungeonEvents;
 import com.k8bus.vfx.DungeonsVfx;
 import com.k8bus.vfx.VfxTheme;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.monster.Monster;
 
 public void registerDungeonHooks() {
-    // Warunek wejścia do dungeonu (np. wymagany klucz lub limit graczy):
+    // Control who can enter a dungeon (e.g. key check, party limit, level requirement):
     DungeonEvents.CAN_ENTER_DUNGEON.register((level, dungeon, player) -> !player.isSleeping());
 
-    // Modyfikacja każdego moba spawnowanego przez falę (np. customowe eq, statystyki, aura VFX):
+    // Customize spawned wave mobs (gear, stats, bossbars, VFX):
     DungeonEvents.MOB_SPAWNED.register((level, room, waveIndex, entity) -> {
         if (waveIndex >= 2 && entity instanceof Monster monster) {
-            monster.setCustomName(net.minecraft.network.chat.Component.literal("§4Elitarny Strażnik"));
+            monster.setCustomName(Component.literal("§4Elite Guardian"));
             DungeonsVfx.aura(level, monster, VfxTheme.SOUL, 200);
         }
     });
 
-    // Reakcja na oczyszczenie pokoju:
+    // React when a room is cleared:
     DungeonEvents.ROOM_CLEAR.register((level, dungeon, room) -> {
         if (!room.getHeroChestPos().equals(net.minecraft.core.BlockPos.ZERO)) {
             DungeonsVfx.groundRing(level, room.getHeroChestPos().getCenter(), 3.5f, VfxTheme.RADIANCE);
         }
     });
 
-    // Przejęcie dropu ze skrzyni (zwrócenie false blokuje domyślny drop silnika):
+    // Override chest loot (return false to cancel the engine's built-in / loot-table drops):
     DungeonEvents.CHEST_OPENED.register((level, dungeon, pos, player, chestState) -> true);
 }
 ```
 
-Dostępne eventy w [`DungeonEvents`](src/main/java/com/k8bus/api/DungeonEvents.java):
+Available events in [`DungeonEvents`](src/main/java/com/k8bus/api/DungeonEvents.java):
 * `DungeonEvents.CAN_ENTER_DUNGEON` – `(level, dungeon, player)` → `boolean`
 * `DungeonEvents.DUNGEON_PHASE_CHANGE` – `(level, dungeon, oldPhase, newPhase)`
 * `DungeonEvents.DUNGEON_START` – `(level, dungeon)`
@@ -250,41 +340,28 @@ Dostępne eventy w [`DungeonEvents`](src/main/java/com/k8bus/api/DungeonEvents.j
 * `DungeonEvents.ROOM_CLEAR` – `(level, dungeon, room)`
 * `DungeonEvents.CHEST_OPENED` – `(level, dungeon, pos, player, chestState)` → `boolean`
 
-### 3. `DungeonsVfx` – biblioteka efektów wizualnych
+### 3. `DungeonsVfx` – Visual Effects API
 
-Statyczne API wysyłające zoptymalizowane pakiety efektów do graczy śledzących dany chunk (`PlayerLookup.tracking`). Każdy efekt przyjmuje motyw kolorystyczny `VfxTheme` (`FIRE`, `FROST`, `LIGHTNING`, `POISON`, `VOID`, `RADIANCE`, `SOUL`, `DEFLECT`, `VINES`, `WEBBING`):
+Static helper sending optimized VFX packets to tracking players (`PlayerLookup.tracking`). Available themes in [`VfxTheme`](src/main/java/com/k8bus/vfx/VfxTheme.java): `FIRE`, `FROST`, `LIGHTNING`, `POISON`, `VOID`, `RADIANCE`, `SOUL`, `DEFLECT`, `VINES`, `WEBBING`:
 
 ```java
 import com.k8bus.vfx.DungeonsVfx;
 import com.k8bus.vfx.VfxTheme;
 
-// Łuk cięcia mieczem przed graczem/mobem:
 DungeonsVfx.slashArc(serverLevel, attackerEntity, VfxTheme.VOID);
-
-// Stożkowy rozbłysk w punkcie trafienia:
 DungeonsVfx.impactBurst(serverLevel, hitPosVec3, hitNormalVec3, VfxTheme.FIRE);
-
-// Fala uderzeniowa (pierścień) na ziemi:
 DungeonsVfx.groundRing(serverLevel, centerVec3, 4.0f, VfxTheme.LIGHTNING);
-
-// Promień / błyskawica łącząca dwa punkty (np. chain lightning):
 DungeonsVfx.chain(serverLevel, fromVec3, toVec3, VfxTheme.LIGHTNING);
-
-// Smuga za lecącym pociskiem / strzałą:
 DungeonsVfx.projectileTrail(serverLevel, arrowEntity, VfxTheme.POISON);
-
-// Aura żywiołu wokół bytu (czas w tickach):
 DungeonsVfx.aura(serverLevel, targetEntity, VfxTheme.FROST, 100);
-
-// Efekt spętania (pnącza/pajęczyna) wokół celu:
 DungeonsVfx.ensnare(serverLevel, targetLivingEntity, VfxTheme.VINES, 60);
 ```
 
 ---
 
-## Licencja
+## License
 
 **Copyright (c) 2026 k8bus. All Rights Reserved (ARR).**
 
-* **Dozwolone:** Wykorzystywanie oficjalnych wydań tego moda jako zależności (API / Library dependency) we własnych modach oraz dołączanie go do paczek modów (Modpacks) na Modrinth / CurseForge.
-* **Zabronione:** Kopiowanie kodu źródłowego lub zasobów (assets) do własnych projektów, modyfikowanie oraz re-uploadowanie plików `.jar` bez zgody autora. Szczegóły w pliku [LICENSE](LICENSE).
+* **Allowed:** Using official releases of this mod as a library/API dependency in your own mods and including it in modpacks on Modrinth / CurseForge.
+* **Prohibited:** Copying source code or assets into your own projects, modifying, or re-uploading `.jar` files without explicit permission from the author. See [LICENSE](LICENSE) for details.

@@ -1,16 +1,16 @@
 # Unnamed Dungeons Engine & API - To Do List
 
-> Content (enchanty, efekty, Wpłatomat/ekonomia oraz Jungle Outpost) został przeniesiony na osobny branch `content`, aby `main` pozostał czystym silnikiem i API dungeonów.
+> Mod content (enchantments, effects, Wallet/economy, and Jungle Outpost) was moved to the separate `content` branch so `main` remains a clean Dungeon Engine & API.
 
-## Silnik i API (zrealizowane)
-- [x] Tag bloków bram `#unnamed-dungeons:dungeon_gates` oraz obsługa customowych bram i wariantów `facing` / `open` w resource packach.
-- [x] Konfigurowalne rozmiary barier bram (`width x height`) przez `DungeonGateBlock`, `DungeonGateBlockEntity`, komendę `/dungeon setgatesize`, NBT, JSON i `DungeonApi`.
-- [x] Tryb powtarzalny (`repeatable`) oraz sterowane per-dungeon czasy (`timings` w JSON i `DungeonApi.configureTimings`).
-- [x] Rozszerzone `DungeonEvents` (`CAN_ENTER_DUNGEON`, `DUNGEON_PHASE_CHANGE`, `WAVE_COMPLETE`, `CHEST_OPENED`).
-- [x] Ochrona terenu (niszczenie, stawianie bloków, rozlewanie płynów z wiader, eksplozje) oraz przywracanie skrzyń przy `reset`, `resign` i ukończeniu `repeatable`.
-- [x] Poprawka startu pokojów/fal (uruchamiane wyłącznie w fazie `ACTIVE` przez `DungeonRoomHandler`).
+## Engine & API (Completed)
+- [x] Gate block tag `#unnamed-dungeons:dungeon_gates` and custom gate / `facing` + `open` resource-pack variants.
+- [x] Configurable gate barrier sizes (`width x height`) via `DungeonGateBlock`, `DungeonGateBlockEntity`, `/dungeon setgatesize`, NBT metadata, JSON, and `DungeonApi`.
+- [x] Repeatable dungeon mode (`repeatable`) and per-dungeon controllable `timings` (JSON + `DungeonApi.configureTimings`).
+- [x] Expanded `DungeonEvents` (`CAN_ENTER_DUNGEON`, `DUNGEON_PHASE_CHANGE`, `WAVE_COMPLETE`, `CHEST_OPENED`).
+- [x] Full area protection (breaking, block placement, bucket fluid placement, explosions) and chest/block restoration on `reset`, `resign`, and `repeatable` completion.
+- [x] Fixed premature room/wave startup (rooms now start strictly during `ACTIVE` phase via `DungeonRoomHandler`).
 
-## Przed wydaniem / dalsze kroki
-- [ ] Test na żywo w grze (pełne przejście `WAITING` -> `PREPARING` -> `ACTIVE` -> `COMPLETED` / `repeatable`, `/dungeon reset`, `/dungeon resign`, ochrona bloków/wiader).
-- [ ] Podpięcie docelowych modeli 3D / tekstur dla `dungeon_gate` (`dungeon_gate.json` / `dungeon_gate_open.json`) oraz ewentualne zastąpienie tymczasowych grafik w HUD.
-- [ ] Opcjonalne wydzielenie `DungeonsVfx` do osobnego moda / biblioteki.
+## Before Release / Future Work
+- [ ] Live in-game playtest (full run `WAITING` -> `PREPARING` -> `ACTIVE` -> `COMPLETED` / `repeatable`, `/dungeon reset`, `/dungeon resign`, non-OP block/bucket protection).
+- [ ] Final 3D models/textures for `dungeon_gate` (`dungeon_gate.json` / `dungeon_gate_open.json`) and optional custom HUD icons.
+- [ ] Optional split of `DungeonsVfx` into a standalone library mod.
